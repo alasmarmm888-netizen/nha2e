@@ -11,8 +11,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 
 # ==================== الإعدادات الأساسية ====================
-MAIN_BOT_TOKEN = "7566859808:AAEwN40h3xpajEYhVVUuqx4SB7QX5bvdbJ8"
-ADMIN_BOT_TOKEN = "8074752128:AAH0lalPmi773gk1k1y_EKEmAKib20OG1j8"
+MAIN_BOT_TOKEN = "7566859808:AAHI0WzczJ2nDmuzRI-F-WzxyUS9SglkvwE"
+ADMIN_BOT_TOKEN = "8074752128:AAHkPJ1Acsk8i3l7X-IaeL2FhWGmYIbZzlg"
 ARCHIVE_CHANNEL = "-1003178411340"
 ERROR_CHANNEL = "-1003091305351"
 WALLET_ADDRESS = "TYy5CnBE3kJ2b7oom3vPhey8PX5mi7GQhd"
