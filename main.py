@@ -594,8 +594,11 @@ async def send_hourly_report():
     except Exception as e:
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
-import asyncio
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
+import logging
+
+# تفعيل logging
+logging.basicConfig(level=logging.INFO)
 
 def main():
     print("🚀 بدء تشغيل نظام التداول الآلي...")
@@ -604,20 +607,20 @@ def main():
     setup_scheduled_reports()
     print("✅ التقارير التلقائية جاهزة")
     
-    # إنشاء البوتات
-    main_app = Application.builder().token(MAIN_BOT_TOKEN).build()
-    admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
+    # إنشاء البوتات (للإصدار 13.x)
+    main_updater = Updater(MAIN_BOT_TOKEN, use_context=True)
+    admin_updater = Updater(ADMIN_BOT_TOKEN, use_context=True)
     
     # إضافة handlers للبوت الرئيسي
-    main_app.add_handler(CommandHandler("start", start))
-    main_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
-    main_app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
-    main_app.add_handler(CallbackQueryHandler(handle_buttons))
+    main_updater.dispatcher.add_handler(CommandHandler("start", start))
+    main_updater.dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_user_registration))
+    main_updater.dispatcher.add_handler(MessageHandler(Filters.photo, handle_payment_proof))
+    main_updater.dispatcher.add_handler(CallbackQueryHandler(handle_buttons))
     
     # إضافة handlers لبوت الإدارة
-    admin_app.add_handler(CommandHandler("start", admin_start))
-    admin_app.add_handler(CommandHandler("admin", admin_start))
-    admin_app.add_handler(CallbackQueryHandler(handle_buttons))
+    admin_updater.dispatcher.add_handler(CommandHandler("start", admin_start))
+    admin_updater.dispatcher.add_handler(CommandHandler("admin", admin_start))
+    admin_updater.dispatcher.add_handler(CallbackQueryHandler(handle_buttons))
     
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
     print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
@@ -626,9 +629,17 @@ def main():
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
-    # تشغيل البوت الرئيسي فقط (يمكنك التبديل إلى بوت الإدارة)
+    # تشغيل البوتات
     print("🔧 تشغيل البوت الرئيسي...")
-    main_app.run_polling()
+    main_updater.start_polling()
+    
+    print("🔧 تشغيل بوت الإدارة...")
+    admin_updater.start_polling()
+    
+    print("✅ جميع البوتات شغالة")
+    
+    # الانتظار إلى أن يتم إيقاف البرنامج
+    main_updater.idle()
 
 if __name__ == '__main__':
     main()
