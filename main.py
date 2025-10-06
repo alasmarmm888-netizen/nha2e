@@ -4,7 +4,6 @@ import sqlite3
 import requests
 import schedule
 import time
-import json
 import asyncio
 from datetime import datetime, date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -93,7 +92,7 @@ def register_user(user_id, full_name, phone, country, referral_code=None):
     conn.commit()
     conn.close()
     if referred_by:
-        notify_referral_signup(referred_by, user_id, full_name)
+        asyncio.create_task(send_admin_notification(f"🎉 لديك محال جديد!\n👤 الاسم: {full_name}\n🆔 الأيدي: {user_id}"))
     return user_referral_code
 
 def update_user_balance(user_id, amount):
@@ -126,13 +125,6 @@ async def send_error_notification(error_message):
         await admin_app.bot.send_message(chat_id=ERROR_CHANNEL, text=f"🚨 خطأ: {error_message}")
     except Exception as e:
         logger.error(f"خطأ في إرسال إشعار الخطأ: {e}")
-
-def notify_referral_signup(referrer_id, referred_id, referred_name):
-    try:
-        message = f"🎉 لديك محال جديد!\n👤 الاسم: {referred_name}\n🆔 الأيدي: {referred_id}"
-        asyncio.run(send_admin_notification(message))
-    except Exception as e:
-        logger.error(f"خطأ في إشعار الإحالة: {e}")
 
 def add_referral_commission(referrer_id, referred_id, amount):
     commission = amount * 0.10
@@ -573,8 +565,8 @@ def setup_scheduled_reports():
         while True:
             schedule.run_pending()
             time.sleep(1)
-    schedule.every().day.at("08:00").do(lambda: asyncio.run(send_daily_report()))
-    schedule.every().hour.do(lambda: asyncio.run(send_hourly_report()))
+    schedule.every().day.at("08:00").do(lambda: asyncio.create_task(send_daily_report()))
+    schedule.every().hour.do(lambda: asyncio.create_task(send_hourly_report()))
     threading.Thread(target=run_daily, daemon=True).start()
 
 async def send_daily_report():
@@ -602,45 +594,33 @@ async def send_hourly_report():
     except Exception as e:
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
-import asyncio
-
 def main():
     print("🚀 بدء تشغيل نظام التداول الآلي...")
     init_database()
     print("✅ قاعدة البيانات مهيأة")
     setup_scheduled_reports()
     print("✅ التقارير التلقائية جاهزة")
-
     main_app = Application.builder().token(MAIN_BOT_TOKEN).build()
     admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
-
-    # handlers البوت الرئيسي
     main_app.add_handler(CommandHandler("start", start))
     main_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
     main_app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     main_app.add_handler(CallbackQueryHandler(handle_buttons))
-
-    # handlers بوت الإدارة
     admin_app.add_handler(CommandHandler("start", admin_start))
     admin_app.add_handler(CommandHandler("admin", admin_start))
     admin_app.add_handler(CallbackQueryHandler(handle_buttons))
-
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
     print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
     print("📊 القنوات:")
     print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
-
     async def run_bots():
-        # هذه الدالة تشغل كلا البوتين وتبقيهم نشطين
         await asyncio.gather(
             main_app.run_polling(),
             admin_app.run_polling()
         )
-
     try:
-        # استخدم فقط asyncio.run بدون أي دوال lifecycle يدوية
         asyncio.run(run_bots())
     except KeyboardInterrupt:
         print("⏹️ إيقاف النظام...")
