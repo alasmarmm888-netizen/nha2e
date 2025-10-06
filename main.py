@@ -594,7 +594,10 @@ async def send_hourly_report():
     except Exception as e:
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
-def main():
+import asyncio
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+
+async def main():
     print("🚀 بدء تشغيل نظام التداول الآلي...")
     init_database()
     print("✅ قاعدة البيانات مهيأة")
@@ -615,17 +618,17 @@ def main():
     print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
-    async def run_bots():
-        await asyncio.gather(
-            main_app.run_polling(),
-            admin_app.run_polling()
-        )
+    
+    # تشغيل البوتين معاً
+    await asyncio.gather(
+        main_app.run_polling(),
+        admin_app.run_polling()
+    )
+
+if __name__ == '__main__':
     try:
-        asyncio.run(run_bots())
+        asyncio.run(main())
     except KeyboardInterrupt:
         print("⏹️ إيقاف النظام...")
     except Exception as e:
         print(f"❌ خطأ في التشغيل: {e}")
-
-if __name__ == '__main__':
-    main()
