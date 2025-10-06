@@ -602,6 +602,8 @@ async def send_hourly_report():
     except Exception as e:
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
+import asyncio
+
 def main():
     print("🚀 بدء تشغيل نظام التداول الآلي...")
     init_database()
@@ -617,23 +619,39 @@ def main():
     admin_app.add_handler(CommandHandler("start", admin_start))
     admin_app.add_handler(CommandHandler("admin", admin_start))
     admin_app.add_handler(CallbackQueryHandler(handle_buttons))
+
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
     print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
     print("📊 القنوات:")
     print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
+
     async def run_bots():
         await asyncio.gather(
-            main_app.run_polling(),
-            admin_app.run_polling(),
+            main_app.initialize(),
+            admin_app.initialize()
         )
+        await asyncio.gather(
+            main_app.start(),
+            admin_app.start()
+        )
+        await asyncio.gather(
+            main_app.stop(),
+            admin_app.stop()
+        )
+        await asyncio.gather(
+            main_app.shutdown(),
+            admin_app.shutdown()
+        )
+
     try:
-        asyncio.run(run_bots())
+        # بدلاً من asyncio.run()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(run_bots())
     except KeyboardInterrupt:
         print("⏹️ إيقاف النظام...")
     except Exception as e:
         print(f"❌ خطأ في التشغيل: {e}")
-
 if __name__ == '__main__':
     main()
