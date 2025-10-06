@@ -610,12 +610,17 @@ def main():
     print("✅ قاعدة البيانات مهيأة")
     setup_scheduled_reports()
     print("✅ التقارير التلقائية جاهزة")
+
     main_app = Application.builder().token(MAIN_BOT_TOKEN).build()
     admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
+
+    # handlers البوت الرئيسي
     main_app.add_handler(CommandHandler("start", start))
     main_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
     main_app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     main_app.add_handler(CallbackQueryHandler(handle_buttons))
+
+    # handlers بوت الإدارة
     admin_app.add_handler(CommandHandler("start", admin_start))
     admin_app.add_handler(CommandHandler("admin", admin_start))
     admin_app.add_handler(CallbackQueryHandler(handle_buttons))
@@ -628,30 +633,19 @@ def main():
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
 
     async def run_bots():
+        # هذه الدالة تشغل كلا البوتين وتبقيهم نشطين
         await asyncio.gather(
-            main_app.initialize(),
-            admin_app.initialize()
-        )
-        await asyncio.gather(
-            main_app.start(),
-            admin_app.start()
-        )
-        await asyncio.gather(
-            main_app.stop(),
-            admin_app.stop()
-        )
-        await asyncio.gather(
-            main_app.shutdown(),
-            admin_app.shutdown()
+            main_app.run_polling(),
+            admin_app.run_polling()
         )
 
     try:
-        # بدلاً من asyncio.run()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(run_bots())
+        # استخدم فقط asyncio.run بدون أي دوال lifecycle يدوية
+        asyncio.run(run_bots())
     except KeyboardInterrupt:
         print("⏹️ إيقاف النظام...")
     except Exception as e:
         print(f"❌ خطأ في التشغيل: {e}")
+
 if __name__ == '__main__':
     main()
