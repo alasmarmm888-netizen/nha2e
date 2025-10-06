@@ -5,7 +5,7 @@ import requests
 import schedule
 import time
 import json
-from threading import Thread
+import asyncio
 from datetime import datetime, date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
@@ -130,7 +130,7 @@ async def send_error_notification(error_message):
 def notify_referral_signup(referrer_id, referred_id, referred_name):
     try:
         message = f"🎉 لديك محال جديد!\n👤 الاسم: {referred_name}\n🆔 الأيدي: {referred_id}"
-        Thread(target=lambda: asyncio.run(send_admin_notification(message))).start()
+        asyncio.run(send_admin_notification(message))
     except Exception as e:
         logger.error(f"خطأ في إشعار الإحالة: {e}")
 
@@ -567,14 +567,15 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await send_error_notification(f"خطأ في معالجة الزر {data}: {e}")
 
 def setup_scheduled_reports():
-    schedule.every().day.at("08:00").do(lambda: Thread(target=lambda: asyncio.run(send_daily_report())).start())
-    schedule.every().hour.do(lambda: Thread(target=lambda: asyncio.run(send_hourly_report())).start())
-    def run_scheduler():
+    # استخدم threading للجدولة فقط وليس للـ polling
+    import threading
+    def run_daily():
         while True:
             schedule.run_pending()
             time.sleep(1)
-    scheduler_thread = Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
+    schedule.every().day.at("08:00").do(lambda: asyncio.run(send_daily_report()))
+    schedule.every().hour.do(lambda: asyncio.run(send_hourly_report()))
+    threading.Thread(target=run_daily, daemon=True).start()
 
 async def send_daily_report():
     try:
@@ -622,20 +623,13 @@ def main():
     print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
+    async def run_bots():
+        await asyncio.gather(
+            main_app.run_polling(),
+            admin_app.run_polling(),
+        )
     try:
-        def run_main_bot():
-            main_app.run_polling()
-        def run_admin_bot():
-            admin_app.run_polling()
-        main_thread = Thread(target=run_main_bot, daemon=True)
-        admin_thread = Thread(target=run_admin_bot, daemon=True)
-        main_thread.start()
-        admin_thread.start()
-        print("🎉 جميع البوتات شغالة الآن!")
-        print("💡 البوت الرئيسي: للاستخدام العام")
-        print("🛠️ بوت الإدارة: للتحكم والإدارة")
-        while True:
-            time.sleep(1)
+        asyncio.run(run_bots())
     except KeyboardInterrupt:
         print("⏹️ إيقاف النظام...")
     except Exception as e:
@@ -643,13 +637,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# ==================== ملاحظات هامة ====================
-# 1. تأكد من وضع التوكنات ومتغيرات البيئة في إعدادات Render.
-# 2. قاعدة البيانات تحفظ في مجلد المشروع تلقائيًا ولن تُحذف عند إعادة التشغيل.
-# 3. ملف requirements.txt يجب أن يحتوي:
-# python-telegram-bot==20.0
-# schedule
-# requests
-# sqlite3 (مضمن مع بايثون)
-# 4. إذا ظهرت أي رسالة خطأ، أرسلها لي فورًا.
