@@ -597,21 +597,33 @@ async def send_hourly_report():
 import asyncio
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
+async def run_bot(app, bot_name):
+    """دالة منفصلة لتشغيل كل بوت"""
+    try:
+        print(f"🔧 جاري تشغيل {bot_name}...")
+        await app.run_polling()
+    except Exception as e:
+        print(f"❌ خطأ في {bot_name}: {e}")
+
 async def main():
     print("🚀 بدء تشغيل نظام التداول الآلي...")
     init_database()
     print("✅ قاعدة البيانات مهيأة")
     setup_scheduled_reports()
     print("✅ التقارير التلقائية جاهزة")
+    
     main_app = Application.builder().token(MAIN_BOT_TOKEN).build()
     admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
+    
     main_app.add_handler(CommandHandler("start", start))
     main_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
     main_app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     main_app.add_handler(CallbackQueryHandler(handle_buttons))
+    
     admin_app.add_handler(CommandHandler("start", admin_start))
     admin_app.add_handler(CommandHandler("admin", admin_start))
     admin_app.add_handler(CallbackQueryHandler(handle_buttons))
+    
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
     print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
     print("📊 القنوات:")
@@ -619,11 +631,19 @@ async def main():
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
-    # تشغيل البوتين معاً
-    await asyncio.gather(
-        main_app.run_polling(),
-        admin_app.run_polling()
+    # تشغيل البوتين كـ tasks منفصلة
+    main_task = asyncio.create_task(run_bot(main_app, "البوت الرئيسي"))
+    admin_task = asyncio.create_task(run_bot(admin_app, "بوت الإدارة"))
+    
+    # انتظار انتهاء أي من المهام (سيحدث خطأ أو إيقاف)
+    done, pending = await asyncio.wait(
+        [main_task, admin_task],
+        return_when=asyncio.FIRST_COMPLETED
     )
+    
+    # إلغاء المهمة المتبقية
+    for task in pending:
+        task.cancel()
 
 if __name__ == '__main__':
     try:
