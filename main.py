@@ -594,44 +594,33 @@ async def send_hourly_report():
     except Exception as e:
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
-import logging
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
-import time
-from threading import Thread
-
-logging.basicConfig(level=logging.INFO)
-
-def start_main_bot():
-    """تشغيل البوت الرئيسي"""
-    print("🔧 تشغيل البوت الرئيسي...")
-    updater = Updater(MAIN_BOT_TOKEN, use_context=True)
-    
-    updater.dispatcher.add_handler(CommandHandler("start", start))
-    updater.dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_user_registration))
-    updater.dispatcher.add_handler(MessageHandler(Filters.photo, handle_payment_proof))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_buttons))
-    
-    updater.start_polling()
-    updater.idle()
-
-def start_admin_bot():
-    """تشغيل بوت الإدارة"""
-    print("🔧 تشغيل بوت الإدارة...")
-    updater = Updater(ADMIN_BOT_TOKEN, use_context=True)
-    
-    updater.dispatcher.add_handler(CommandHandler("start", admin_start))
-    updater.dispatcher.add_handler(CommandHandler("admin", admin_start))
-    updater.dispatcher.add_handler(CallbackQueryHandler(handle_buttons))
-    
-    updater.start_polling()
-    updater.idle()
-
+# ==================== التشغيل الرئيسي ====================
 def main():
-    print("🚀 بدء تشغيل نظام التداول الآلي...")
+    """الدالة الرئيسية للتشغيل"""
+    print("🚀 بدء تشغيل نظام التداال الآلي...")
+    
+    # تهيئة قاعدة البيانات
     init_database()
     print("✅ قاعدة البيانات مهيأة")
+    
+    # إعداد التقارير التلقائية
     setup_scheduled_reports()
     print("✅ التقارير التلقائية جاهزة")
+    
+    # تشغيل البوت الرئيسي
+    main_app = Application.builder().token(MAIN_BOT_TOKEN).build()
+    
+    # handlers البوت الرئيسي
+    main_app.add_handler(CommandHandler("start", start))
+    main_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
+    main_app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
+    main_app.add_handler(CallbackQueryHandler(handle_buttons))
+    
+    # تشغيل بوت الإدارة
+    admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
+    admin_app.add_handler(CommandHandler("start", admin_start))
+    admin_app.add_handler(CommandHandler("admin", admin_start))
+    admin_app.add_handler(CallbackQueryHandler(handle_buttons))
     
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
     print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
@@ -640,23 +629,37 @@ def main():
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
-    # تشغيل البوتين في خيوط منفصلة
-    main_thread = Thread(target=start_main_bot)
-    admin_thread = Thread(target=start_admin_bot)
-    
-    main_thread.daemon = True
-    admin_thread.daemon = True
-    
-    main_thread.start()
-    time.sleep(3)  # انتظار 3 ثواني قبل بدء البوت الثاني
-    admin_thread.start()
-    
-    # الانتظار إلى ما لا نهاية
+    # تشغيل البوتات
     try:
+        # تشغيل البوت الرئيسي في thread منفصل
+        def run_main_bot():
+            main_app.run_polling()
+        
+        # تشغيل بوت الإدارة في thread منفصل  
+        def run_admin_bot():
+            admin_app.run_polling()
+        
+        main_thread = Thread(target=run_main_bot, daemon=True)
+        admin_thread = Thread(target=run_admin_bot, daemon=True)
+        
+        main_thread.start()
+        admin_thread.start()
+        
+        print("🎉 جميع البوتات شغالة الآن!")
+        print("💡 البوت الرئيسي: للاستخدام العام")
+        print("🛠️ بوت الإدارة: للتحكم والإدارة")
+        
+        # إبقاء البرنامج شغال
         while True:
             time.sleep(1)
+            
     except KeyboardInterrupt:
         print("⏹️ إيقاف النظام...")
+    except Exception as e:
+        print(f"❌ خطأ في التشغيل: {e}")
 
+# ==================== التشغيل ====================
 if __name__ == '__main__':
     main()
+
+# ==================== نهاية الكود الكامل ====================
