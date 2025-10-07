@@ -600,59 +600,52 @@ import asyncio
 import logging
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
-# إعداد logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+logging.basicConfig(level=logging.INFO)
 
-async def run_bot(token, bot_name, handlers):
-    """دالة عامة لتشغيل أي بوت"""
-    print(f"🔧 تشغيل {bot_name}...")
-    application = Application.builder().token(token).build()
+class BotManager:
+    def __init__(self):
+        self.tasks = []
     
-    for handler in handlers:
-        application.add_handler(handler)
-    
-    await application.run_polling()
+    async def start_all_bots(self):
+        print("🚀 بدء تشغيل نظام التداول الآلي...")
+        
+        # التهيئة
+        init_database()
+        print("✅ قاعدة البيانات مهيأة")
+        setup_scheduled_reports()
+        print("✅ التقارير التلقائية جاهزة")
+        
+        # إنشاء البوتات
+        main_app = Application.builder().token(MAIN_BOT_TOKEN).build()
+        admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
+        
+        # إضافة handlers
+        main_app.add_handler(CommandHandler("start", start))
+        main_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
+        main_app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
+        main_app.add_handler(CallbackQueryHandler(handle_buttons))
+        
+        admin_app.add_handler(CommandHandler("start", admin_start))
+        admin_app.add_handler(CommandHandler("admin", admin_start))
+        admin_app.add_handler(CallbackQueryHandler(handle_buttons))
+        
+        print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
+        print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
+        print("📊 القنوات:")
+        print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
+        print("   🚨 الأخطاء:", ERROR_CHANNEL)
+        print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
+        
+        # تشغيل البوتين
+        task1 = asyncio.create_task(main_app.run_polling())
+        task2 = asyncio.create_task(admin_app.run_polling())
+        
+        self.tasks = [task1, task2]
+        await asyncio.gather(*self.tasks)
 
 async def main():
-    print("🚀 بدء تشغيل نظام التداول الآلي...")
-    
-    # تهيئة النظام
-    init_database()
-    print("✅ قاعدة البيانات مهيأة")
-    
-    setup_scheduled_reports()
-    print("✅ التقارير التلقائية جاهزة")
-    
-    # تعريف handlers للبوت الرئيسي
-    main_handlers = [
-        CommandHandler("start", start),
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration),
-        MessageHandler(filters.PHOTO, handle_payment_proof),
-        CallbackQueryHandler(handle_buttons)
-    ]
-    
-    # تعريف handlers لبوت الإدارة
-    admin_handlers = [
-        CommandHandler("start", admin_start),
-        CommandHandler("admin", admin_start),
-        CallbackQueryHandler(handle_buttons)
-    ]
-    
-    print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
-    print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
-    print("📊 القنوات:")
-    print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
-    print("   🚨 الأخطاء:", ERROR_CHANNEL)
-    print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
-    
-    # تشغيل البوتين بشكل متوازي
-    await asyncio.gather(
-        run_bot(MAIN_BOT_TOKEN, "البوت الرئيسي", main_handlers),
-        run_bot(ADMIN_BOT_TOKEN, "بوت الإدارة", admin_handlers)
-    )
+    bot_manager = BotManager()
+    await bot_manager.start_all_bots()
 
 if __name__ == '__main__':
     try:
