@@ -594,57 +594,44 @@ async def send_hourly_report():
     except Exception as e:
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
-import asyncio
 import logging
-import sys
-import os
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
+import time
+from threading import Thread
 
-# محاولة استيراد جميع المكتبات المطلوبة
-try:
-    import requests
-    import schedule
-    from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
-    from telegram import Update
-    from telegram.ext import ContextTypes
-except ImportError as e:
-    print(f"❌ وحدة غير مثبتة: {e}")
-    print("📦 جاري تثبيت المتطلبات...")
-    os.system(f"{sys.executable} -m pip install -r requirements.txt")
-    # إعادة استيراد بعد التثبيت
-    import requests
-    import schedule
-    from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+logging.basicConfig(level=logging.INFO)
 
-# إعداد logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-
-async def main():
-    print("🚀 بدء تشغيل نظام التداول الآلي...")
+def start_main_bot():
+    """تشغيل البوت الرئيسي"""
+    print("🔧 تشغيل البوت الرئيسي...")
+    updater = Updater(MAIN_BOT_TOKEN, use_context=True)
     
-    # تأكدي أن هذه الدوال معرفة
+    updater.dispatcher.add_handler(CommandHandler("start", start))
+    updater.dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_user_registration))
+    updater.dispatcher.add_handler(MessageHandler(Filters.photo, handle_payment_proof))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_buttons))
+    
+    updater.start_polling()
+    updater.idle()
+
+def start_admin_bot():
+    """تشغيل بوت الإدارة"""
+    print("🔧 تشغيل بوت الإدارة...")
+    updater = Updater(ADMIN_BOT_TOKEN, use_context=True)
+    
+    updater.dispatcher.add_handler(CommandHandler("start", admin_start))
+    updater.dispatcher.add_handler(CommandHandler("admin", admin_start))
+    updater.dispatcher.add_handler(CallbackQueryHandler(handle_buttons))
+    
+    updater.start_polling()
+    updater.idle()
+
+def main():
+    print("🚀 بدء تشغيل نظام التداول الآلي...")
     init_database()
     print("✅ قاعدة البيانات مهيأة")
-    
     setup_scheduled_reports()
     print("✅ التقارير التلقائية جاهزة")
-    
-    # إنشاء التطبيقات
-    main_app = Application.builder().token(MAIN_BOT_TOKEN).build()
-    admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
-    
-    # إضافة handlers للبوت الرئيسي
-    main_app.add_handler(CommandHandler("start", start))
-    main_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
-    main_app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
-    main_app.add_handler(CallbackQueryHandler(handle_buttons))
-    
-    # إضافة handlers لبوت الإدارة
-    admin_app.add_handler(CommandHandler("start", admin_start))
-    admin_app.add_handler(CommandHandler("admin", admin_start))
-    admin_app.add_handler(CallbackQueryHandler(handle_buttons))
     
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
     print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
@@ -653,19 +640,23 @@ async def main():
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
-    # تشغيل البوتين
+    # تشغيل البوتين في خيوط منفصلة
+    main_thread = Thread(target=start_main_bot)
+    admin_thread = Thread(target=start_admin_bot)
+    
+    main_thread.daemon = True
+    admin_thread.daemon = True
+    
+    main_thread.start()
+    time.sleep(3)  # انتظار 3 ثواني قبل بدء البوت الثاني
+    admin_thread.start()
+    
+    # الانتظار إلى ما لا نهاية
     try:
-        await asyncio.gather(
-            main_app.run_polling(),
-            admin_app.run_polling()
-        )
-    except Exception as e:
-        print(f"❌ خطأ في تشغيل البوتات: {e}")
-
-if __name__ == '__main__':
-    try:
-        asyncio.run(main())
+        while True:
+            time.sleep(1)
     except KeyboardInterrupt:
         print("⏹️ إيقاف النظام...")
-    except Exception as e:
-        print(f"❌ خطأ في التشغيل: {e}")
+
+if __name__ == '__main__':
+    main()
