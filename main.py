@@ -603,11 +603,15 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
 async def main():
     print("🚀 بدء تشغيل نظام التداول الآلي...")
+    
+    # تأكدي أن هذه الدوال لا تستخدم asyncio داخلياً
     init_database()
     print("✅ قاعدة البيانات مهيأة")
+    
     setup_scheduled_reports()
     print("✅ التقارير التلقائية جاهزة")
     
@@ -633,16 +637,23 @@ async def main():
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
-    # تشغيل البوتين
-    await asyncio.gather(
-        main_app.run_polling(),
-        admin_app.run_polling()
-    )
+    # تشغيل البوتين بطريقة مختلفة
+    try:
+        # بدء البوتين كـ tasks
+        main_task = asyncio.create_task(main_app.run_polling())
+        admin_task = asyncio.create_task(admin_app.run_polling())
+        
+        # انتظار كلا المهمتين
+        await asyncio.gather(main_task, admin_task)
+        
+    except Exception as e:
+        logger.error(f"خطأ في تشغيل البوتات: {e}")
+        raise
 
 if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("⏹️ إيقاف النظام...")
+        print("⏹️ إيقاف النظام بواسطة المستخدم...")
     except Exception as e:
         print(f"❌ خطأ في التشغيل: {e}")
