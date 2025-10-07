@@ -596,62 +596,57 @@ async def send_hourly_report():
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
 # ==================== التشغيل الرئيسي ====================
-import asyncio
 import logging
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 
 logging.basicConfig(level=logging.INFO)
 
-class BotManager:
-    def __init__(self):
-        self.tasks = []
+ADMIN_GROUP = "-1001234567890"  # مجموعة السوبر للإدارة
+
+def main():
+    print("🚀 بدء تشغيل نظام التداول الآلي...")
     
-    async def start_all_bots(self):
-        print("🚀 بدء تشغيل نظام التداول الآلي...")
-        
-        # التهيئة
-        init_database()
-        print("✅ قاعدة البيانات مهيأة")
-        setup_scheduled_reports()
-        print("✅ التقارير التلقائية جاهزة")
-        
-        # إنشاء البوتات
-        main_app = Application.builder().token(MAIN_BOT_TOKEN).build()
-        admin_app = Application.builder().token(ADMIN_BOT_TOKEN).build()
-        
-        # إضافة handlers
-        main_app.add_handler(CommandHandler("start", start))
-        main_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
-        main_app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
-        main_app.add_handler(CallbackQueryHandler(handle_buttons))
-        
-        admin_app.add_handler(CommandHandler("start", admin_start))
-        admin_app.add_handler(CommandHandler("admin", admin_start))
-        admin_app.add_handler(CallbackQueryHandler(handle_buttons))
-        
-        print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
-        print("✅ بوت الإدارة جاهز - التوكن:", ADMIN_BOT_TOKEN[:10] + "...")
-        print("📊 القنوات:")
-        print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
-        print("   🚨 الأخطاء:", ERROR_CHANNEL)
-        print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
-        
-        # تشغيل البوتين
-        task1 = asyncio.create_task(main_app.run_polling())
-        task2 = asyncio.create_task(admin_app.run_polling())
-        
-        self.tasks = [task1, task2]
-        await asyncio.gather(*self.tasks)
+    init_database()
+    print("✅ قاعدة البيانات مهيأة")
+    
+    setup_scheduled_reports()
+    print("✅ التقارير التلقائية جاهزة")
+    
+    print("✅ البوت الرئيسي جاهز")
+    print("📊 القنوات والمجموعات:")
+    print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
+    print("   🚨 الأخطاء:", ERROR_CHANNEL)
+    print("   👥 الإدارة:", ADMIN_GROUP)
+    print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
+    
+    updater = Updater(MAIN_BOT_TOKEN, use_context=True)
+    dp = updater.dispatcher
+    
+    # أوامر عامة
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_user_registration))
+    dp.add_handler(MessageHandler(Filters.photo, handle_payment_proof))
+    dp.add_handler(CallbackQueryHandler(handle_buttons))
+    
+    # مراقبة مجموعة الإدارة
+    dp.add_handler(MessageHandler(Filters.chat(ADMIN_GROUP) & Filters.text, handle_admin_group))
+    
+    updater.start_polling()
+    print("✅ النظام يعمل - بوت رئيسي + مجموعة إدارة")
+    updater.idle()
 
-async def main():
-    bot_manager = BotManager()
-    await bot_manager.start_all_bots()
-
-if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("⏹️ إيقاف النظام...")
-    except Exception as e:
-        print(f"❌ خطأ في التشغيل: {e}")
+def handle_admin_group(update, context):
+    """معالجة الرسائل في مجموعة الإدارة"""
+    message = update.message.text
+    
+    if message.startswith("/stats"):
+        stats = get_system_stats()
+        update.message.reply_text(f"📊 إحصائيات النظام:\n{stats}")
+        
+    elif message.startswith("/broadcast"):
+        # بث رسالة لجميع المستخدمين
+        broadcast_message = message.replace("/broadcast", "").strip()
+        if broadcast_message:
+            broadcast_to_all(context, broadcast_message)
+            update.message.reply_text("✅ تم البث بنجاح")
 # ==================== نهاية الكود الكامل ====================
