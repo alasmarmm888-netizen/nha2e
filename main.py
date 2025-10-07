@@ -596,19 +596,35 @@ async def send_hourly_report():
 
 import asyncio
 import logging
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+import sys
+import os
+
+# محاولة استيراد جميع المكتبات المطلوبة
+try:
+    import requests
+    import schedule
+    from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+    from telegram import Update
+    from telegram.ext import ContextTypes
+except ImportError as e:
+    print(f"❌ وحدة غير مثبتة: {e}")
+    print("📦 جاري تثبيت المتطلبات...")
+    os.system(f"{sys.executable} -m pip install -r requirements.txt")
+    # إعادة استيراد بعد التثبيت
+    import requests
+    import schedule
+    from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
 # إعداد logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
-logger = logging.getLogger(__name__)
 
 async def main():
     print("🚀 بدء تشغيل نظام التداول الآلي...")
     
-    # تأكدي أن هذه الدوال لا تستخدم asyncio داخلياً
+    # تأكدي أن هذه الدوال معرفة
     init_database()
     print("✅ قاعدة البيانات مهيأة")
     
@@ -637,23 +653,19 @@ async def main():
     print("   🚨 الأخطاء:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
-    # تشغيل البوتين بطريقة مختلفة
+    # تشغيل البوتين
     try:
-        # بدء البوتين كـ tasks
-        main_task = asyncio.create_task(main_app.run_polling())
-        admin_task = asyncio.create_task(admin_app.run_polling())
-        
-        # انتظار كلا المهمتين
-        await asyncio.gather(main_task, admin_task)
-        
+        await asyncio.gather(
+            main_app.run_polling(),
+            admin_app.run_polling()
+        )
     except Exception as e:
-        logger.error(f"خطأ في تشغيل البوتات: {e}")
-        raise
+        print(f"❌ خطأ في تشغيل البوتات: {e}")
 
 if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("⏹️ إيقاف النظام بواسطة المستخدم...")
+        print("⏹️ إيقاف النظام...")
     except Exception as e:
         print(f"❌ خطأ في التشغيل: {e}")
