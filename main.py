@@ -961,7 +961,7 @@ async def main():
         await app.run_polling()
     except Exception as e:
         print(f"❌ خطأ في تشغيل البوت: {e}")
-    finally:
+    #finally:
         # إيقاف المهمة الخلفية
         background_task.cancel()
 
