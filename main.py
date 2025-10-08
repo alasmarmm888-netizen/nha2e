@@ -961,14 +961,8 @@ print("✅ التقارير التلقائية جاهزة")
     except Exception as e:
         print(f"❌ خطأ في تشغيل البوت: {e}")
     finally:
-        # تنظيف الموارد بشكل صحيح
-        scheduler.stop_scheduler()
-        if scheduler_task and not scheduler_task.done():
-            scheduler_task.cancel()
-            try:
-                await scheduler_task
-            except asyncio.CancelledError:
-                pass
+    # إيقاف المهمة الخلفية
+    background_task.cancel()
 
 # ==================== التشغيل ====================
 if __name__ == '__main__':
