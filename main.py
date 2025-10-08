@@ -957,17 +957,8 @@ async def main():
     # بدء البوت
     print("🎉 البوت شغال الآن!")
 
-    try:
-        # الطريقة البسيطة
-        app.run_polling()
-    except KeyboardInterrupt:
-        print("⏹️ إيقاف البوت...")
+    # بدء البوت
+    print("🎉 البوت شغال الآن!")
 
-# ==================== التشغيل ====================
-if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("⏹️ إيقاف النظام...")
-    except Exception as e:
-        print(f"❌ خطأ في التشغيل: {e}")
+    if __name__ == '__main__':
+        app.run_polling()
