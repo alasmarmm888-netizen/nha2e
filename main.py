@@ -958,17 +958,17 @@ async def main():
     print("🎉 البوت شغال الآن!")
 
     try:
-    # تشغيل البوت كـ task منفصل
-        polling_task = asyncio.create_task(app.run_polling())
-        await polling_task
-    except Exception as e:
-        print(f"❌ خطأ في تشغيل البوت: {e}")
-    except asyncio.CancelledError:
-        print("⏹️ إيقاف البوت...")
-    #finally:
-        # إيقاف المهمة الخلفية
-        #background_task.cancel()
-
+    # الطريقة البسيطة بدون تعقيد
+       await app.initialize()
+       await app.start()
+       await asyncio.Future()  # يبقي البوت شغال للأبد
+     except Exception as e:
+       print(f"❌ خطأ في تشغيل البوت: {e}")
+     except KeyboardInterrupt:
+       print("⏹️ إيقاف البوت...")
+     finally:
+       await app.stop()
+       await app.shutdown()
 # ==================== التشغيل ====================
 if __name__ == '__main__':
     try:
