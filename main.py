@@ -2,7 +2,6 @@ import os
 import asyncio
 import logging
 import sqlite3
-import schedule
 import time
 from datetime import datetime, date
 from threading import Thread
@@ -906,29 +905,36 @@ async def send_hourly_report():
     except Exception as e:
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
-def schedule_loop():
-    """حلقة الجدولة التي تعمل في thread منفصل"""
-    while True:
-        try:
-            schedule.run_pending()
-            time.sleep(60)  # التحقق كل دقيقة
-        except Exception as e:
-            logger.error(f"❌ خطأ في نظام الجدولة: {e}")
-
-async def setup_scheduler():
-    """إعداد المهام المجدولة"""
-    try:
-        # إضافة المهام إلى الجدولة
-        schedule.every().day.at("08:00").do(lambda: asyncio.create_task(send_daily_report()))
-        schedule.every().hour.do(lambda: asyncio.create_task(send_hourly_report()))
+# ==================== نظام الجدولة المحسن ====================
+class SchedulerManager:
+    def __init__(self):
+        self.running = False
         
-        # بدء thread الجدولة
-        scheduler_thread = Thread(target=schedule_loop, daemon=True)
-        scheduler_thread.start()
-        
-        logger.info("✅ التقارير التلقائية جاهزة")
-    except Exception as e:
-        logger.error(f"❌ خطأ في إعداد الجدولة: {e}")
+    async def start_scheduler(self):
+        """بدء نظام الجدولة"""
+        self.running = True
+        while self.running:
+            try:
+                now = datetime.now()
+                
+                # التقرير اليومي الساعة 8:00
+                if now.hour == 8 and now.minute == 0:
+                    await send_daily_report()
+                
+                # التقرير الساعي
+                if now.minute == 0:
+                    await send_hourly_report()
+                
+                # الانتظار لمدة دقيقة قبل الفحص التالي
+                await asyncio.sleep(60)
+                
+            except Exception as e:
+                logger.error(f"❌ خطأ في الجدولة: {e}")
+                await asyncio.sleep(60)
+    
+    def stop_scheduler(self):
+        """إيقاف نظام الجدولة"""
+        self.running = False
 
 # ==================== التشغيل الرئيسي ====================
 async def main():
@@ -938,10 +944,6 @@ async def main():
     # تهيئة قاعدة البيانات
     init_database()
     print("✅ قاعدة البيانات مهيأة")
-    
-    # إعداد التقارير التلقائية
-    await setup_scheduler()
-    print("✅ التقارير التلقائية جاهزة")
     
     # إنشاء تطبيق البوت
     app = Application.builder().token(MAIN_BOT_TOKEN).build()
@@ -959,9 +961,22 @@ async def main():
     print("   🚨 الأخطاء والإدارة:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
+    # بدء نظام الجدولة في الخلفية
+    scheduler = SchedulerManager()
+    scheduler_task = asyncio.create_task(scheduler.start_scheduler())
+    print("✅ التقارير التلقائية جاهزة")
+    
     # بدء البوت
     print("🎉 البوت شغال الآن!")
-    await app.run_polling()
+    
+    try:
+        await app.run_polling()
+    except Exception as e:
+        print(f"❌ خطأ في تشغيل البوت: {e}")
+    finally:
+        # تنظيف الموارد
+        scheduler.stop_scheduler()
+        await scheduler_task
 
 # ==================== التشغيل ====================
 if __name__ == '__main__':
@@ -971,5 +986,3 @@ if __name__ == '__main__':
         print("⏹️ إيقاف النظام...")
     except Exception as e:
         print(f"❌ خطأ في التشغيل: {e}")
-
-# ==================== نهاية الكود الكامل ====================
