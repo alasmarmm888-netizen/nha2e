@@ -963,7 +963,7 @@ async def main():
         print(f"❌ خطأ في تشغيل البوت: {e}")
     #finally:
         # إيقاف المهمة الخلفية
-        background_task.cancel()
+        #background_task.cancel()
 
 # ==================== التشغيل ====================
 if __name__ == '__main__':
