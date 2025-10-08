@@ -905,37 +905,25 @@ async def send_hourly_report():
     except Exception as e:
         await send_error_notification(f"خطأ في التقرير الساعي: {e}")
 
-# ==================== نظام الجدولة المحسن ====================
-class SchedulerManager:
-    def __init__(self, app):
-        self.running = False
-        self.app = app
-        
-    async def start_scheduler(self):
-        """بدء نظام الجدولة"""
-        self.running = True
-        while self.running:
-            try:
-                now = datetime.now()
-                
-                # التقرير اليومي الساعة 8:00
-                if now.hour == 8 and now.minute == 0:
-                    await send_daily_report()
-                
-                # التقرير الساعي
-                if now.minute == 0:
-                    await send_hourly_report()
-                
-                # الانتظار لمدة دقيقة قبل الفحص التالي
-                await asyncio.sleep(60)
-                
-            except Exception as e:
-                logger.error(f"❌ خطأ في الجدولة: {e}")
-                await asyncio.sleep(60)
-    
-    def stop_scheduler(self):
-        """إوقف نظام الجدولة"""
-        self.running = False
+# ==================== نظام الجدولة البسيط ====================
+async def scheduler_background():
+    """جدولة بسيطة في الخلفية"""
+    while True:
+        try:
+            now = datetime.now()
+            
+            # التقرير اليومي الساعة 8:00
+            if now.hour == 8 and now.minute == 0:
+                await send_daily_report()
+            
+            # التقرير الساعي
+            if now.minute == 0:
+                await send_hourly_report()
+            
+            await asyncio.sleep(60)
+        except Exception as e:
+            logger.error(f"❌ خطأ في الجدولة: {e}")
+            await asyncio.sleep(60)
 
 # ==================== التشغيل الرئيسي ====================
 async def main():
@@ -963,10 +951,8 @@ async def main():
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
     # بدء نظام الجدولة في الخلفية
-    scheduler = SchedulerManager(app)
-    scheduler_task = asyncio.create_task(scheduler.start_scheduler())
-    print("✅ التقارير التلقائية جاهزة")
-    
+background_task = asyncio.create_task(scheduler_background())
+print("✅ التقارير التلقائية جاهزة")
     # بدء البوت
     print("🎉 البوت شغال الآن!")
 
