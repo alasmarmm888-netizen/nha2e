@@ -951,19 +951,19 @@ async def main():
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
     # بدء نظام الجدولة في الخلفية
-background_task = asyncio.create_task(scheduler_background())
-print("✅ التقارير التلقائية جاهزة")
+    background_task = asyncio.create_task(scheduler_background())
+    print("✅ التقارير التلقائية جاهزة")
 
-# بدء البوت
-print("🎉 البوت شغال الآن!")
+    # بدء البوت
+    print("🎉 البوت شغال الآن!")
 
-try:
-    await app.run_polling()
-except Exception as e:
-    print(f"❌ خطأ في تشغيل البوت: {e}")
-finally:
-    # إيقاف المهمة الخلفية
-    background_task.cancel()
+    try:
+        await app.run_polling()
+    except Exception as e:
+        print(f"❌ خطأ في تشغيل البوت: {e}")
+    finally:
+        # إيقاف المهمة الخلفية
+        background_task.cancel()
 
 # ==================== التشغيل ====================
 if __name__ == '__main__':
