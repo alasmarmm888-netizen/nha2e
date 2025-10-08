@@ -961,10 +961,10 @@ async def main():
     # تشغيل البوت كـ task منفصل
     polling_task = asyncio.create_task(app.run_polling())
     await polling_task
-    except Exception as e:
+except Exception as e:
     print(f"❌ خطأ في تشغيل البوت: {e}")
-    except asyncio.CancelledError:
-    print("⏹️ إيقاف البوت..."): {e}")
+except asyncio.CancelledError:
+    print("⏹️ إيقاف البوت...")
     #finally:
         # إيقاف المهمة الخلفية
         #background_task.cancel()
