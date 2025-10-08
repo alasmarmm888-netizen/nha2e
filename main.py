@@ -951,8 +951,8 @@ async def main():
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
     # بدء نظام الجدولة في الخلفية
-    background_task = asyncio.create_task(scheduler_background())
-    print("✅ التقارير التلقائية جاهزة")
+    #background_task = asyncio.create_task(scheduler_background())
+    #print("✅ التقارير التلقائية جاهزة")
 
     # بدء البوت
     print("🎉 البوت شغال الآن!")
