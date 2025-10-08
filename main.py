@@ -907,8 +907,9 @@ async def send_hourly_report():
 
 # ==================== نظام الجدولة المحسن ====================
 class SchedulerManager:
-    def __init__(self):
+    def __init__(self, app):
         self.running = False
+        self.app = app
         
     async def start_scheduler(self):
         """بدء نظام الجدولة"""
@@ -933,7 +934,7 @@ class SchedulerManager:
                 await asyncio.sleep(60)
     
     def stop_scheduler(self):
-        """إيقاف نظام الجدولة"""
+        """إوقف نظام الجدولة"""
         self.running = False
 
 # ==================== التشغيل الرئيسي ====================
@@ -962,7 +963,7 @@ async def main():
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
     # بدء نظام الجدولة في الخلفية
-    scheduler = SchedulerManager()
+    scheduler = SchedulerManager(app)
     scheduler_task = asyncio.create_task(scheduler.start_scheduler())
     print("✅ التقارير التلقائية جاهزة")
     
@@ -976,7 +977,8 @@ async def main():
     finally:
         # تنظيف الموارد
         scheduler.stop_scheduler()
-        await scheduler_task
+        if scheduler_task:
+            scheduler_task.cancel()
 
 # ==================== التشغيل ====================
 if __name__ == '__main__':
