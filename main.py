@@ -970,15 +970,19 @@ async def main():
     # بدء البوت
     print("🎉 البوت شغال الآن!")
     
-    try:
-        await app.run_polling()
-    except Exception as e:
-        print(f"❌ خطأ في تشغيل البوت: {e}")
-    finally:
-        # تنظيف الموارد
-        scheduler.stop_scheduler()
-        if scheduler_task:
-            scheduler_task.cancel()
+   try:
+    await app.run_polling()
+except Exception as e:
+    print(f"❌ خطأ في تشغيل البوت: {e}")
+finally:
+    # تنظيف الموارد بشكل صحيح
+    scheduler.stop_scheduler()
+    if scheduler_task and not scheduler_task.done():
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
 
 # ==================== التشغيل ====================
 if __name__ == '__main__':
