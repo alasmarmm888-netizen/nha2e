@@ -378,6 +378,8 @@ async def send_to_user_from_channel(update: Update, context: ContextTypes.DEFAUL
 # ==================== معالجة تسجيل البيانات ====================
 async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """معالجة بيانات تسجيل المستخدم"""
+    if not update or not update.message:
+        return
     try:
         user_id = update.effective_user.id
         user_input = update.message.text.strip()
