@@ -180,6 +180,8 @@ def add_transaction(user_id, transaction_type, amount, status="pending"):
 async def send_admin_notification(message):
     """إرسال إشعار إداري إلى قناة الأخطاء (التي أصبحت قناة الإدارة أيضاً)"""
     try:
+        await asyncio.sleep(1)
+        
         app = Application.builder().token(MAIN_BOT_TOKEN).build()
         admin_text = f"👨‍💼 **إشعار إداري**\n\n{message}\n\n⏰ الوقت: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         await app.bot.send_message(
@@ -193,6 +195,9 @@ async def send_admin_notification(message):
 async def send_error_notification(error_message):
     """إرسال إشعار خطأ إلى قناة الأخطاء"""
     try:
+        
+        await asyncio.sleep(1)
+        
         app = Application.builder().token(MAIN_BOT_TOKEN).build()
         error_text = f"🚨 **تقرير خطأ**\n\n{error_message}\n\n⏰ الوقت: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         await app.bot.send_message(
@@ -1004,6 +1009,18 @@ def main():
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
     print("🎉 البوت شغال الآن!")
+    
+    # إضافة error handler عام
+    async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """معالجة الأخطاء العامة"""
+        logger.error(f"خطأ غير متوقع: {context.error}")
+    
+    app.add_error_handler(error_handler)
+
+
+
+
+
     
     # أبسط طريقة - run_polling مباشر
     app.run_polling()
