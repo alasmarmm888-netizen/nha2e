@@ -327,7 +327,54 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception as e:
         logger.error(f"❌ خطأ في عرض القائمة الرئيسية: {e}")
         await send_error_notification(f"خطأ في عرض القائمة الرئيسية: {e}")
+# ==================== نظام المراسلة ====================
+async def forward_to_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """إعادة توجيه رسائل المستخدمين للقناة"""
+    user_id = update.effective_user.id
+    user_data = get_user_data(user_id)
+    user_name = user_data[1] if user_data else update.effective_user.first_name
+    
+    if update.message.text:
+        message_text = f"📩 رسالة من {user_name} (ID: {user_id}):\n{update.message.text}"
+        await send_admin_notification(message_text)
+    
+    elif update.message.photo:
+        caption = f"📸 صورة من {user_name} (ID: {user_id})"
+        if update.message.caption:
+            caption += f"\nالتعليق: {update.message.caption}"
+        
+        app = Application.builder().token(MAIN_BOT_TOKEN).build()
+        await app.bot.send_photo(
+            chat_id=ERROR_CHANNEL,
+            photo=update.message.photo[-1].file_id,
+            caption=caption
+        )
 
+async def send_to_user_from_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """إرسال رسالة للمستخدم من القناة (الصيغة: /send user_id الرسالة)"""
+    user_id = update.effective_user.id
+    
+    # التحقق من صلاحية الأدمن
+    if str(user_id) not in ["100317841", "763916290"]:
+        return
+    
+    if update.message.text.startswith('/send'):
+        try:
+            parts = update.message.text.split(' ', 2)
+            if len(parts) >= 3:
+                target_user_id = int(parts[1])
+                message_text = parts[2]
+                
+                app = Application.builder().token(MAIN_BOT_TOKEN).build()
+                await app.bot.send_message(
+                    chat_id=target_user_id,
+                    text=f"📬 رسالة من الإدارة:\n{message_text}"
+                )
+                await update.message.reply_text(f"✅ تم إرسال الرسالة للمستخدم {target_user_id}")
+            else:
+                await update.message.reply_text("❌ استخدم: /send user_id الرسالة")
+        except Exception as e:
+            await update.message.reply_text(f"❌ خطأ في الإرسال: {e}")
 # ==================== معالجة تسجيل البيانات ====================
 async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """معالجة بيانات تسجيل المستخدم"""
@@ -945,7 +992,9 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
     app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     app.add_handler(CallbackQueryHandler(handle_buttons))
-    
+    # إضافة handlers نظام المراسلة
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_to_channel))
+    app.add_handler(CommandHandler("send", send_to_user_from_channel))
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
     print("📊 القنوات:")
     print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
