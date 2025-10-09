@@ -770,7 +770,9 @@ async def approve_subscription(update: Update, context: ContextTypes.DEFAULT_TYP
         conn.close()
         
         await query.answer("✅ تم تفعيل الاشتراك!")
-        await query.edit_message_text(f"✅ تم تفعيل اشتراك المستخدم {user_id} بالخطة {plan['name']}")
+        await context.bot.send_message(
+           chat_id=query.message.chat_id,
+            text=f"✅ تم تفعيل اشتراك المستخدم {user_id} بالخطة {plan['name']}")
         
         # إرسال إشعار للمستخدم
         try:
