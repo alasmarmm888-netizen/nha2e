@@ -1105,13 +1105,7 @@ if __name__ == "__main__":
     import os
     import asyncio
     
-    try:
-        # الطريقة المثلى لـ Render
-        if hasattr(app, 'run_polling'):
-            app.run_polling(
-                drop_pending_updates=True,
-                close_loop=False
-            )
+    
         else:
             # طريقة بديلة
             loop = asyncio.new_event_loop()
