@@ -927,27 +927,30 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             
         elif data == "admin_stats":
             await admin_stats(update, context)
+            
         elif data == "admin_users":
             await admin_users(update, context)
             
         elif data == "admin_wallets":
             await admin_wallets(update, context)
+            
         elif data.startswith("reply_"):
-           user_id = data.split("_")[1]
-          context.user_data['replying_to'] = user_id
-             await query.edit_message_text(
-             f"📩 جاهز للرد على المستخدم {user_id}\n\nأرسل رسالة الرد الآن:"
-    )
-    
+            user_id = data.split("_")[1]
+            context.user_data['replying_to'] = user_id
+            await query.edit_message_text(
+                f"📩 جاهز للرد على المستخدم {user_id}\n\nأرسل رسالة الرد الآن:"
+            )
+            
         elif data == "messaging_system":
-          await show_messaging_system(update, context)
-        
-        
+            await show_messaging_system(update, context)
+            
         elif data == "admin_pending":
             await admin_pending_requests(update, context)
+            
         elif data == "admin_refresh":
             await send_admin_panel_to_channel()
-            await query.answer("✅ تم تحديث اللوحة")   
+            await query.answer("✅ تم تحديث اللوحة")
+            
         else:
             await query.answer("⚙️ هذه الخاصية قيد التطوير")
             
