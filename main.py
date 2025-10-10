@@ -673,7 +673,7 @@ async def show_referral_system(update: Update, context: ContextTypes.DEFAULT_TYP
         await send_error_notification(f"خطأ في عرض نظام الإحالة: {e}")
 
 # ==================== نظام الإدارة - أوامر الأدمن ====================
-async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """بدء أوامر الإدارة"""
     try:
         user_id = update.effective_user.id
