@@ -839,8 +839,7 @@ async def admin_wallets(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.error(f"❌ خطأ في إدارة المحافظ: {e}")
         await send_error_notification(f"خطأ في إدارة المحافظ: {e}")
 
-# ====================      """إرسال لوحة التحكم إلى قناة الإدارة"""
- ====================
+# ===================="""إرسال لوحة التحكم إلى قناة الإدارة"""===============
 
 async def send_admin_panel_to_channel():
     """إرسال لوحة التحكم إلى قناة الإدارة"""
