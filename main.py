@@ -683,7 +683,7 @@ async def show_referral_system(update: Update, context: ContextTypes.DEFAULT_TYP
             await update.message.reply_text("❌ غير مصرح لك بالوصول!")
             return
         
-        keyboard = [
+        #keyboard = [
             [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
             [InlineKeyboardButton("👥 إدارة المستخدمين", callback_data="admin_users")],
             [InlineKeyboardButton("💳 طلبات السحب", callback_data="admin_withdrawals")],
