@@ -1052,7 +1052,7 @@ async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TY
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة الأخطاء العامة"""
     logger.error(f"خطأ غير متوقع: {context.error}")
-    async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ البوت شغال!")
 # ==================== التشغيل الرئيسي ====================
 async def main():
