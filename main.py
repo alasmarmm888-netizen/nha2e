@@ -1068,43 +1068,52 @@ async def main():
     
     # إضافة handlers
     app.add_handler(CommandHandler("start", start))
-    # app.add_handler(CommandHandler("admin", admin_start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
     app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     app.add_handler(CallbackQueryHandler(handle_buttons))
     app.add_handler(CommandHandler("test", test_command))
-    # إضافة handlers نظام المراسلة
     app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ERROR_CHANNEL)), handle_admin_reply))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_user_messages))
-    #app.add_handler(CommandHandler("send", send_to_user_from_channel))
-    
-    # إضافة error handler عام
     app.add_error_handler(error_handler)
     
-    print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
-    print("📊 القنوات:")
-    print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
-    print("   🚨 الأخطاء والإدارة:", ERROR_CHANNEL)
-    print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
-    # طباعة معلومات الـ handlers للتأكد
-    print("🔧 الـ handlers المضافين:")
-    for handler in app.handlers[0]:
-        print(f"   - {handler}")
+    print("✅ البوت الرئيسي جاهز")
     print("🎉 البوت شغال الآن!")
     
     # إرسال لوحة التحكم للقناة عند البدء
     await send_admin_panel_to_channel()
     
-    # تشغيل البوت
-    await app.run_polling()
+    # تشغيل البوت - الطريقة المثلى لـ Render
+    await app.initialize()
+    await app.start()
+    print("✅ البوت بدأ الاستماع للرسائل...")
+    
+    # البقاء شغالاً إلى الأبد
+    while True:
+        await asyncio.sleep(3600)  # انتظار ساعة
 
 # ==================== التشغيل ====================
 if __name__ == "__main__":
     import asyncio
+    import signal
+    import sys
+    
+    def signal_handler(sig, frame):
+        print("🛑 إيقاف البوت...")
+        sys.exit(0)
+    
+    # معالجة إشارات الإيقاف
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     try:
-        # الطريقة المثلى لـ Render
+        # تشغيل البوت
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("🛑 Bot stopped by user")
+        print("🛑 تم إيقاف البوت بواسطة المستخدم")
     except Exception as e:
-        print(f"💥 Bot crashed: {e}")
+        print(f"💥 خطأ غير متوقع: {e}")
+        # إعادة التشغيل بعد 5 ثواني
+        import time
+        time.sleep(5)
+        print("🔄 إعادة تشغيل البوت...")
+        os.execv(sys.executable, ['python'] + sys.argv)
