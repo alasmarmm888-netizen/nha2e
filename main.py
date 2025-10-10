@@ -1015,7 +1015,7 @@ async def scheduler_background():
             await asyncio.sleep(60)
 
 # ==================== التشغيل الرئيسي ====================
-def main():
+async def main():
     """الدالة الرئيسية للتشغيل"""
     print("🚀 بدء تشغيل نظام التداول الآلي...")
     
@@ -1028,15 +1028,19 @@ def main():
     
     # إضافة handlers
     app.add_handler(CommandHandler("start", start))
-    #app.add_handler(CommandHandler("admin", admin_start))
+    # app.add_handler(CommandHandler("admin", admin_start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
     app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     app.add_handler(CallbackQueryHandler(handle_buttons))
+    
     # إضافة handlers نظام المراسلة
     app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ERROR_CHANNEL)), handle_admin_reply))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_user_messages))
-    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_to_channel))
     app.add_handler(CommandHandler("send", send_to_user_from_channel))
+    
+    # إضافة error handler عام
+    app.add_error_handler(error_handler)
+    
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
     print("📊 القنوات:")
     print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
@@ -1044,9 +1048,15 @@ def main():
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
     print("🎉 البوت شغال الآن!")
+    
     # إرسال لوحة التحكم للقناة عند البدء
     await send_admin_panel_to_channel()
-    async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    
+    # تشغيل البوت
+    await app.run_polling()
+
+# ==================== دوال نظام المراسلة (خارج main) ====================
+async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة ردود الأدمن على المستخدمين"""
     if 'replying_to' in context.user_data:
         target_user_id = context.user_data['replying_to']
@@ -1064,7 +1074,8 @@ def main():
             
         except Exception as e:
             await update.message.reply_text(f"❌ فشل إرسال الرد: {e}")
-    async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """عرض نظام المراسلة"""
     query = update.callback_query
     await query.answer()
@@ -1079,21 +1090,11 @@ def main():
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(text, reply_markup=reply_markup)
-# إضافة error handler عام
-        async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """معالجة الأخطاء العامة"""
-        logger.error(f"خطأ غير متوقع: {context.error}")
-    
-    app.add_error_handler(error_handler)
 
-
-
-
-
-    
-    # أبسط طريقة - run_polling مباشر
-    app.run_polling()
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة الأخطاء العامة"""
+    logger.error(f"خطأ غير متوقع: {context.error}")
 
 # ==================== التشغيل ====================
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
