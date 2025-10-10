@@ -1101,5 +1101,27 @@ async def main():
 
 
 # ==================== التشغيل ====================
-if __name__ == '__main__':
-    asyncio.run(main())
+if __name__ == "__main__":
+    import os
+    import asyncio
+    
+    try:
+        # الطريقة المثلى لـ Render
+        if hasattr(app, 'run_polling'):
+            app.run_polling(
+                drop_pending_updates=True,
+                close_loop=False
+            )
+        else:
+            # طريقة بديلة
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        print("🛑 Bot stopped by user")
+    except Exception as e:
+        print(f"💥 Bot crashed: {e}")
+        # إعادة التشغيل التلقائي بعد خطأ
+        import time
+        time.sleep(5)
+        os.execv(sys.executable, ['python'] + sys.argv)
