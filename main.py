@@ -186,8 +186,7 @@ async def send_admin_notification(message):
         admin_text = f"👨‍💼 **إشعار إداري**\n\n{message}\n\n⏰ الوقت: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         await app.bot.send_message(
             chat_id=ERROR_CHANNEL,
-            text=admin_text,
-            parse_mode='Markdown'
+            text=admin_text'
         )
     except Exception as e:
         logger.error(f"❌ فشل إرسال الإشعار الإداري: {e}")
@@ -202,8 +201,7 @@ async def send_error_notification(error_message):
         error_text = f"🚨 **تقرير خطأ**\n\n{error_message}\n\n⏰ الوقت: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         await app.bot.send_message(
             chat_id=ERROR_CHANNEL,
-            text=error_text,
-            parse_mode='Markdown'
+            text=error_text'
         )
     except Exception as e:
         logger.error(f"❌ فشل إرسال تقرير الخطأ: {e}")
@@ -214,8 +212,7 @@ async def send_to_archive(message):
         app = Application.builder().token(MAIN_BOT_TOKEN).build()
         await app.bot.send_message(
             chat_id=ARCHIVE_CHANNEL,
-            text=message,
-            parse_mode='Markdown'
+            text=message'
         )
     except Exception as e:
         logger.error(f"❌ فشل إرسال إلى الأرشيف: {e}")
@@ -333,53 +330,49 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error(f"❌ خطأ في عرض القائمة الرئيسية: {e}")
         await send_error_notification(f"خطأ في عرض القائمة الرئيسية: {e}")
 # ==================== نظام المراسلة ====================
-async def forward_to_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def forward_user_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """إعادة توجيه رسائل المستخدمين للقناة"""
+    # تجاهل الرسائل من القنوات
+    if update.effective_chat.type in ['channel', 'group']:
+        return
+        
     user_id = update.effective_user.id
     user_data = get_user_data(user_id)
     user_name = user_data[1] if user_data else update.effective_user.first_name
     
-    if update.message.text:
-        message_text = f"📩 رسالة من {user_name} (ID: {user_id}):\n{update.message.text}"
-        await send_admin_notification(message_text)
-    
-    elif update.message.photo:
-        caption = f"📸 صورة من {user_name} (ID: {user_id})"
-        if update.message.caption:
-            caption += f"\nالتعليق: {update.message.caption}"
-        
+    try:
         app = Application.builder().token(MAIN_BOT_TOKEN).build()
-        await app.bot.send_photo(
-            chat_id=ERROR_CHANNEL,
-            photo=update.message.photo[-1].file_id,
-            caption=caption
-        )
-
-async def send_to_user_from_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """إرسال رسالة للمستخدم من القناة (الصيغة: /send user_id الرسالة)"""
-    user_id = update.effective_user.id
-    
-    # التحقق من صلاحية الأدمن
-    if str(user_id) not in ["100317841", "763916290"]:
-        return
-    
-    if update.message.text.startswith('/send'):
-        try:
-            parts = update.message.text.split(' ', 2)
-            if len(parts) >= 3:
-                target_user_id = int(parts[1])
-                message_text = parts[2]
-                
-                app = Application.builder().token(MAIN_BOT_TOKEN).build()
-                await app.bot.send_message(
-                    chat_id=target_user_id,
-                    text=f"📬 رسالة من الإدارة:\n{message_text}"
-                )
-                await update.message.reply_text(f"✅ تم إرسال الرسالة للمستخدم {target_user_id}")
-            else:
-                await update.message.reply_text("❌ استخدم: /send user_id الرسالة")
-        except Exception as e:
-            await update.message.reply_text(f"❌ خطأ في الإرسال: {e}")
+        
+        if update.message.text:
+            # إعداد زر الرد
+            keyboard = [[InlineKeyboardButton("📩 رد على المستخدم", callback_data=f"reply_{user_id}")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            message_text = f"📩 رسالة من {user_name} (ID: {user_id}):\n\n{update.message.text}"
+            await app.bot.send_message(
+                chat_id=ERROR_CHANNEL,
+                text=message_text,
+                reply_markup=reply_markup
+            )
+            
+        elif update.message.photo:
+            # إعداد زر الرد للصورة
+            keyboard = [[InlineKeyboardButton("📩 رد على المستخدم", callback_data=f"reply_{user_id}")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            caption = f"📸 صورة من {user_name} (ID: {user_id})"
+            if update.message.caption:
+                caption += f"\nالتعليق: {update.message.caption}"
+            
+            await app.bot.send_photo(
+                chat_id=ERROR_CHANNEL,
+                photo=update.message.photo[-1].file_id,
+                caption=caption,
+                reply_markup=reply_markup
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ خطأ في إعادة توجيه الرسالة: {e}")
 # ==================== معالجة تسجيل البيانات ====================
 async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """معالجة بيانات تسجيل المستخدم"""
@@ -871,6 +864,55 @@ async def admin_wallets(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.error(f"❌ خطأ في إدارة المحافظ: {e}")
         await send_error_notification(f"خطأ في إدارة المحافظ: {e}")
 
+# ====================      """إرسال لوحة التحكم إلى قناة الإدارة"""
+ ====================
+
+async def send_admin_panel_to_channel():
+    """إرسال لوحة التحكم إلى قناة الإدارة"""
+    try:
+        app = Application.builder().token(MAIN_BOT_TOKEN).build()
+        
+        keyboard = [
+            [InlineKeyboardButton("📩 المراسلة", callback_data="messaging_system")],
+            [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
+            [InlineKeyboardButton("👥 آخر المستخدمين", callback_data="admin_users")],
+            [InlineKeyboardButton("💳 طلبات الانتظار", callback_data="admin_pending")],
+            [InlineKeyboardButton("🔄 تحديث اللوحة", callback_data="admin_refresh")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await app.bot.send_message(
+            chat_id=ERROR_CHANNEL,
+            text="🛠️ **لوحة تحكم الأدمن**\n\nاختر الإدارة المطلوبة:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"❌ خطأ في إرسال لوحة التحكم: {e}")
+
+async def admin_pending_requests(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """عرض طلبات الانتظار"""
+    query = update.callback_query
+    await query.answer()
+    
+    # جلب طلبات الانتظار من قاعدة البيانات
+    conn = sqlite3.connect('trading_bot.db', check_same_thread=False)
+    c = conn.cursor()
+    c.execute("SELECT * FROM transactions WHERE status = 'pending'")
+    pending_requests = c.fetchall()
+    conn.close()
+    
+    if pending_requests:
+        text = "📋 طلبات الانتظار:\n\n"
+        for req in pending_requests:
+            text += f"🆔 {req[1]} | 💰 {req[3]} USDT | 📝 {req[2]}\n"
+    else:
+        text = "✅ لا توجد طلبات في الانتظار"
+    
+    keyboard = [[InlineKeyboardButton("🔙 رجوع", callback_data="admin_stats")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(text, reply_markup=reply_markup)
 # ==================== معالجة الأزرار العامة ====================
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """معالجة جميع الأزرار"""
@@ -911,13 +953,27 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             
         elif data == "admin_stats":
             await admin_stats(update, context)
-            
         elif data == "admin_users":
             await admin_users(update, context)
             
         elif data == "admin_wallets":
             await admin_wallets(update, context)
-            
+        elif data.startswith("reply_"):
+           user_id = data.split("_")[1]
+          context.user_data['replying_to'] = user_id
+             await query.edit_message_text(
+             f"📩 جاهز للرد على المستخدم {user_id}\n\nأرسل رسالة الرد الآن:"
+    )
+    
+        elif data == "messaging_system":
+          await show_messaging_system(update, context)
+        
+        
+        elif data == "admin_pending":
+            await admin_pending_requests(update, context)
+        elif data == "admin_refresh":
+            await send_admin_panel_to_channel()
+            await query.answer("✅ تم تحديث اللوحة")   
         else:
             await query.answer("⚙️ هذه الخاصية قيد التطوير")
             
@@ -995,11 +1051,13 @@ def main():
     
     # إضافة handlers
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("admin", admin_start))
+    #app.add_handler(CommandHandler("admin", admin_start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
     app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     app.add_handler(CallbackQueryHandler(handle_buttons))
     # إضافة handlers نظام المراسلة
+    app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ERROR_CHANNEL)), handle_admin_reply))
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_user_messages))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_to_channel))
     app.add_handler(CommandHandler("send", send_to_user_from_channel))
     print("✅ البوت الرئيسي جاهز - التوكن:", MAIN_BOT_TOKEN[:10] + "...")
@@ -1009,9 +1067,43 @@ def main():
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
     
     print("🎉 البوت شغال الآن!")
+    # إرسال لوحة التحكم للقناة عند البدء
+    await send_admin_panel_to_channel()
+    async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة ردود الأدمن على المستخدمين"""
+    if 'replying_to' in context.user_data:
+        target_user_id = context.user_data['replying_to']
+        admin_message = update.message.text
+        
+        try:
+            app = Application.builder().token(MAIN_BOT_TOKEN).build()
+            await app.bot.send_message(
+                chat_id=target_user_id,
+                text=f"📬 رد من الإدارة:\n\n{admin_message}"
+            )
+            
+            await update.message.reply_text(f"✅ تم إرسال الرد للمستخدم {target_user_id}")
+            del context.user_data['replying_to']
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ فشل إرسال الرد: {e}")
+    async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """عرض نظام المراسلة"""
+    query = update.callback_query
+    await query.answer()
     
-    # إضافة error handler عام
-    async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = "📩 نظام المراسلة\n\n"
+    text += "• أي رسالة من المستخدمين تصل تلقائياً للقناة\n"
+    text += "• اضغط على زر 'رد على المستخدم' للرد\n"
+    text += "• ثم اكتب رسالة الرد وسيتم إرسالها\n\n"
+    text += "💡 يمكنك أيضاً استخدام /send user_id الرسالة"
+    
+    keyboard = [[InlineKeyboardButton("🔙 رجوع", callback_data="admin_refresh")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(text, reply_markup=reply_markup)
+# إضافة error handler عام
+        async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """معالجة الأخطاء العامة"""
         logger.error(f"خطأ غير متوقع: {context.error}")
     
