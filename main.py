@@ -1013,7 +1013,45 @@ async def scheduler_background():
         except Exception as e:
             logger.error(f"❌ خطأ في الجدولة: {e}")
             await asyncio.sleep(60)
+# ==================== دوال نظام المراسلة (خارج main) ====================
+async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة ردود الأدمن على المستخدمين"""
+    if 'replying_to' in context.user_data:
+        target_user_id = context.user_data['replying_to']
+        admin_message = update.message.text
+        
+        try:
+            app = Application.builder().token(MAIN_BOT_TOKEN).build()
+            await app.bot.send_message(
+                chat_id=target_user_id,
+                text=f"📬 رد من الإدارة:\n\n{admin_message}"
+            )
+            
+            await update.message.reply_text(f"✅ تم إرسال الرد للمستخدم {target_user_id}")
+            del context.user_data['replying_to']
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ فشل إرسال الرد: {e}")
 
+async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """عرض نظام المراسلة"""
+    query = update.callback_query
+    await query.answer()
+    
+    text = "📩 نظام المراسلة\n\n"
+    text += "• أي رسالة من المستخدمين تصل تلقائياً للقناة\n"
+    text += "• اضغط على زر 'رد على المستخدم' للرد\n"
+    text += "• ثم اكتب رسالة الرد وسيتم إرسالها\n\n"
+    text += "💡 يمكنك أيضاً استخدام /send user_id الرسالة"
+    
+    keyboard = [[InlineKeyboardButton("🔙 رجوع", callback_data="admin_refresh")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(text, reply_markup=reply_markup)
+
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة الأخطاء العامة"""
+    logger.error(f"خطأ غير متوقع: {context.error}")
 # ==================== التشغيل الرئيسي ====================
 async def main():
     """الدالة الرئيسية للتشغيل"""
@@ -1055,45 +1093,7 @@ async def main():
     # تشغيل البوت
     await app.run_polling()
 
-# ==================== دوال نظام المراسلة (خارج main) ====================
-async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """معالجة ردود الأدمن على المستخدمين"""
-    if 'replying_to' in context.user_data:
-        target_user_id = context.user_data['replying_to']
-        admin_message = update.message.text
-        
-        try:
-            app = Application.builder().token(MAIN_BOT_TOKEN).build()
-            await app.bot.send_message(
-                chat_id=target_user_id,
-                text=f"📬 رد من الإدارة:\n\n{admin_message}"
-            )
-            
-            await update.message.reply_text(f"✅ تم إرسال الرد للمستخدم {target_user_id}")
-            del context.user_data['replying_to']
-            
-        except Exception as e:
-            await update.message.reply_text(f"❌ فشل إرسال الرد: {e}")
 
-async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """عرض نظام المراسلة"""
-    query = update.callback_query
-    await query.answer()
-    
-    text = "📩 نظام المراسلة\n\n"
-    text += "• أي رسالة من المستخدمين تصل تلقائياً للقناة\n"
-    text += "• اضغط على زر 'رد على المستخدم' للرد\n"
-    text += "• ثم اكتب رسالة الرد وسيتم إرسالها\n\n"
-    text += "💡 يمكنك أيضاً استخدام /send user_id الرسالة"
-    
-    keyboard = [[InlineKeyboardButton("🔙 رجوع", callback_data="admin_refresh")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(text, reply_markup=reply_markup)
-
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """معالجة الأخطاء العامة"""
-    logger.error(f"خطأ غير متوقع: {context.error}")
 
 # ==================== التشغيل ====================
 if __name__ == '__main__':
