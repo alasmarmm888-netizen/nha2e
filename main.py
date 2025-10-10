@@ -1074,7 +1074,7 @@ async def main():
     # إضافة handlers نظام المراسلة
     app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ERROR_CHANNEL)), handle_admin_reply))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_user_messages))
-    app.add_handler(CommandHandler("send", send_to_user_from_channel))
+    #app.add_handler(CommandHandler("send", send_to_user_from_channel))
     
     # إضافة error handler عام
     app.add_error_handler(error_handler)
