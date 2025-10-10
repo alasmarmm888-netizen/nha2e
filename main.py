@@ -673,32 +673,7 @@ async def show_referral_system(update: Update, context: ContextTypes.DEFAULT_TYP
         await send_error_notification(f"خطأ في عرض نظام الإحالة: {e}")
 
 # ==================== نظام الإدارة - أوامر الأدمن ====================
-#async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """بدء أوامر الإدارة"""
-    try:
-        user_id = update.effective_user.id
-        
-        # التحقق من صلاحية الأدمن (يمكن إضافة المزيد من الأيدي)
-        if str(user_id) not in ["100317841", "763916290"]:  # أضف أيديك هنا
-            await update.message.reply_text("❌ غير مصرح لك بالوصول!")
-            return
-        
-        #keyboard = [
-            [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
-            [InlineKeyboardButton("👥 إدارة المستخدمين", callback_data="admin_users")],
-            [InlineKeyboardButton("💳 طلبات السحب", callback_data="admin_withdrawals")],
-            [InlineKeyboardButton("⚙️ إدارة المحافظ", callback_data="admin_wallets")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.message.reply_text(
-            "🛠️ لوحة تحكم الأدمن\n\n"
-            "اختر الإدارة المطلوبة:",
-            reply_markup=reply_markup
-        )
-    except Exception as e:
-        logger.error(f"❌ خطأ في أمر الأدمن: {e}")
-        await send_error_notification(f"خطأ في أمر الأدمن: {e}")
+
 
 # ==================== إحصائيات الأدمن ====================
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
