@@ -1052,6 +1052,8 @@ async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TY
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة الأخطاء العامة"""
     logger.error(f"خطأ غير متوقع: {context.error}")
+    async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("✅ البوت شغال!")
 # ==================== التشغيل الرئيسي ====================
 async def main():
     """الدالة الرئيسية للتشغيل"""
@@ -1070,7 +1072,7 @@ async def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
     app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     app.add_handler(CallbackQueryHandler(handle_buttons))
-    
+    app.add_handler(CommandHandler("test", test_command))
     # إضافة handlers نظام المراسلة
     app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ERROR_CHANNEL)), handle_admin_reply))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_user_messages))
@@ -1084,7 +1086,10 @@ async def main():
     print("   📁 الأرشيف:", ARCHIVE_CHANNEL)
     print("   🚨 الأخطاء والإدارة:", ERROR_CHANNEL)
     print("   💳 المحفظة:", WALLET_ADDRESS[:10] + "...")
-    
+    # طباعة معلومات الـ handlers للتأكد
+    print("🔧 الـ handlers المضافين:")
+    for handler in app.handlers[0]:
+        print(f"   - {handler}")
     print("🎉 البوت شغال الآن!")
     
     # إرسال لوحة التحكم للقناة عند البدء
