@@ -1098,8 +1098,13 @@ async def main():
     # تشغيل البوت
     await app.run_polling()
 
-
-
 # ==================== التشغيل ====================
-    if __name__ == "__main__":
-        app.run_polling()
+if __name__ == "__main__":
+    import asyncio
+    try:
+        # الطريقة المثلى لـ Render
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("🛑 Bot stopped by user")
+    except Exception as e:
+        print(f"💥 Bot crashed: {e}")
