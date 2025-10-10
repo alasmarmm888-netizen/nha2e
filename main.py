@@ -212,7 +212,7 @@ async def send_to_archive(message):
         app = Application.builder().token(MAIN_BOT_TOKEN).build()
         await app.bot.send_message(
             chat_id=ARCHIVE_CHANNEL,
-            text=message'
+            text=message
         )
     except Exception as e:
         logger.error(f"❌ فشل إرسال إلى الأرشيف: {e}")
