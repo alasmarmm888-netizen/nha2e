@@ -186,7 +186,7 @@ async def send_admin_notification(message):
         admin_text = f"👨‍💼 **إشعار إداري**\n\n{message}\n\n⏰ الوقت: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         await app.bot.send_message(
             chat_id=ERROR_CHANNEL,
-            text=admin_text'
+            text=admin_text
         )
     except Exception as e:
         logger.error(f"❌ فشل إرسال الإشعار الإداري: {e}")
@@ -201,7 +201,7 @@ async def send_error_notification(error_message):
         error_text = f"🚨 **تقرير خطأ**\n\n{error_message}\n\n⏰ الوقت: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         await app.bot.send_message(
             chat_id=ERROR_CHANNEL,
-            text=error_text'
+            text=error_text
         )
     except Exception as e:
         logger.error(f"❌ فشل إرسال تقرير الخطأ: {e}")
