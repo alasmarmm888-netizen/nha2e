@@ -23,27 +23,64 @@ ERROR_CHANNEL = "-1003091305351"
 WALLET_ADDRESS = "TYy5CnBE3k..."
 ADMIN_CHAT_ID = "-1003178411340"
 
-# 📊 خطط الاشتراك
-SUBSCRIPTION_PLANS = {
-    "basic": {
-        "name": "الخطة الأساسية",
-        "price": 25,
-        "days": 30,
-        "profits": "5-10% يومياً"
-    },
-    "pro": {
-        "name": "الخطة المتقدمة", 
-        "price": 50,
-        "days": 30,
-        "profits": "10-15% يومياً"
-    },
-    "vip": {
-        "name": "الخطة المميزة",
-        "price": 100,
-        "days": 30,
-        "profits": "15-20% يومياً"
-    }
-}
+# ==================== دالة init_database المضافة ====================
+def init_database():
+    """تهيئة قاعدة البيانات والجداول"""
+    try:
+        conn = sqlite3.connect('trading_bot.db', check_same_thread=False)
+        c = conn.cursor()
+
+        # جدول المستخدمين
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT,
+                full_name TEXT,
+                phone TEXT,
+                country TEXT,
+                balance REAL DEFAULT 0.0,
+                wallet_address TEXT,
+                referral_code TEXT UNIQUE,
+                referred_by INTEGER,
+                subscription_level TEXT DEFAULT 'basic',
+                registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_active INTEGER DEFAULT 1
+            )
+        ''')
+
+        # جدول المعاملات
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                type TEXT,
+                amount REAL,
+                status TEXT,
+                description TEXT,
+                transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (user_id)
+            )
+        ''')
+
+        # جدول الإحالات
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS referrals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referrer_id INTEGER,
+                referred_id INTEGER,
+                commission_earned REAL DEFAULT 0,
+                referral_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (referrer_id) REFERENCES users (user_id),
+                FOREIGN KEY (referred_id) REFERENCES users (user_id)
+            )
+        ''')
+
+        conn.commit()
+        conn.close()
+        logger.info("✅ قاعدة البيانات مهيأة بنجاح")
+    except Exception as e:
+        logger.error(f"❌ خطأ في تهيئة قاعدة البيانات: {e}")
 
 # ==================== دوال مساعدة جديدة ====================
 def get_db_connection():
@@ -299,6 +336,43 @@ async def show_admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await query.message.reply_text(f"❌ خطأ في جلب الإحصائيات: {e}")
 
+async def show_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """عرض المستخدمين للأدمن"""
+    query = update.callback_query
+    
+    try:
+        result = execute_db_query("SELECT user_id, full_name, balance FROM users ORDER BY registration_date DESC LIMIT 10")
+        
+        users_text = "👥 آخر 10 مستخدمين:\n\n"
+        for user in result:
+            user_id, full_name, balance = user
+            users_text += f"🆔 {user_id} | 📛 {full_name or 'غير معروف'} | 💰 {balance}\n"
+        
+        keyboard = [[InlineKeyboardButton("🔙 رجوع", callback_data="admin_refresh")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(users_text, reply_markup=reply_markup)
+        
+    except Exception as e:
+        await query.message.reply_text(f"❌ خطأ في جلب المستخدمين: {e}")
+
+async def show_add_profit_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """عرض قائمة إضافة الأرباح"""
+    query = update.callback_query
+    
+    try:
+        await query.message.reply_text(
+            "💰 إضافة أرباح للمستخدم\n\n"
+            "استخدم الأمر:\n"
+            "<code>/addprofit user_id amount</code>\n\n"
+            "مثال:\n"
+            "<code>/addprofit 123456789 150.75</code>",
+            parse_mode='HTML'
+        )
+        
+    except Exception as e:
+        await query.message.reply_text(f"❌ خطأ في عرض القائمة: {e}")
+
 # ==================== الدوال الأساسية المعدلة ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """بدء البوت الرئيسي"""
@@ -462,6 +536,35 @@ async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT
     except Exception as e:
         logger.error(f"خطأ في التسجيل: {e}")
         await update.message.reply_text("❌ حدث خطأ في التسجيل")
+
+async def handle_wallet_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة عنوان المحفظة"""
+    try:
+        user_id = update.effective_user.id
+        wallet_address = update.message.text.strip()
+
+        if len(wallet_address) < 10:
+            await update.message.reply_text("❌ عنوان المحفظة قصير جداً")
+            return
+
+        # حفظ في قاعدة البيانات
+        execute_db_query(
+            'UPDATE users SET wallet_address = ? WHERE user_id = ?',
+            (wallet_address, user_id)
+        )
+
+        # مسح حالة الانتظار
+        del context.user_data['awaiting_wallet']
+
+        await update.message.reply_text(
+            f"✅ تم حفظ عنوان محفظتك!\n\n"
+            f"📍 {wallet_address}\n\n"
+            "الآن يمكنك استخدام /withdraw للسحب"
+        )
+
+    except Exception as e:
+        logger.error(f"خطأ في حفظ المحفظة: {e}")
+        await update.message.reply_text("❌ حدث خطأ في حفظ المحفظة")
 
 async def forward_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """تحويل رسائل المستخدمين للإدارة"""
