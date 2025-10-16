@@ -336,21 +336,23 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة رسائل المستخدمين"""
     try:
-        # إذا كان المستخدم بانتظار التسجيل
-        if context.user_data.get('awaiting_registration'):
-            # معالجة بيانات التسجيل
-            user_id = update.effective_user.id
-            message_text = update.message.text
+        user_id = update.effective_user.id
+        message_text = update.message.text
 
-            # تحقق إذا البيانات بتكون بصيغة التسجيل (3 أسطر)
+        # إذا كان بانتظار المحفظة - معالجتها أولاً والخروج
+        if context.user_data.get('awaiting_wallet'):
+            await handle_wallet_address(update, context)
+            return
+
+        # إذا كان بانتظار التسجيل
+        if context.user_data.get('awaiting_registration'):
             lines = message_text.strip().split('\n')
             if len(lines) >= 3:
-                # معالجة التسجيل
                 name = lines[0].strip()
                 phone = lines[1].strip()
                 country = lines[2].strip()
 
-                # حفظ البيانات في قاعدة البيانات
+                # حفظ في قاعدة البيانات
                 conn = sqlite3.connect('trading_bot.db')
                 c = conn.cursor()
                 c.execute('''
@@ -372,35 +374,32 @@ async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT
                     f"🚀 الآن يمكنك استخدام البوت بشكل كامل!"
                 )
 
-                # إشعار الأدمن
-                await send_admin_notification(f"👤 تم تسجيل مستخدم جديد: {name} ({user_id})")
-
+                # إشعار الأدمن مع الربط بالقناة
+                await send_admin_notification(
+                    f"👤 تسجيل جديد:\n"
+                    f"الاسم: {name}\n"
+                    f"الهاتف: {phone}\n"
+                    f"البلد: {country}\n"
+                    f"ID: {user_id}\n"
+                    f"@{update.effective_user.username or 'بدون'}"
+                )
             else:
                 await update.message.reply_text(
                     "❌ يرجى إرسال البيانات بالصيغة الصحيحة:\n\n"
-                    "الاسم الثلاثي\n"
-                    "رقم الواتساب\n"
-                    "البلد\n\n"
-                    "مثال:\n"
-                    "محمد أحمد علي\n"
-                    "966512345678\n"
-                    "السعودية"
+                    "الاسم الثلاثي\nرقم الهاتف\nالبلد\n\n"
+                    "مثال:\nمحمد أحمد علي\n966512345678\nالسعودية"
                 )
+            return
 
-        elif context.user_data.get('awaiting_wallet'):
-            await handle_wallet_address(update, context)
-
-        else:
-            # إذا ما كان بانتظار تسجيل، حول الرسالة للإدارة
-            await forward_user_messages(update, context)
+        # إذا لا يوجد حالة انتظار - تحويل الرسالة للإدارة
+        await forward_user_messages(update, context)
 
     except Exception as e:
-        print(f"❌ خطأ في handle_user_registration: {e}")
-        # حاول تحويل الرسالة كعادي
+        logger.error(f"خطأ في التسجيل: {e}")
         try:
             await forward_user_messages(update, context)
         except Exception as e2:
-            print(f"❌ خطأ في forward_user_messages: {e2}")
+            logger.error(f"خطأ في التحويل: {e2}")
 # ==================== عرض خطط الاشتراك ====================
 async def show_subscription_plans(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """عرض جميع خطط الاشتراك"""
@@ -585,97 +584,66 @@ async def show_withdraw_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await send_error_notification(f"خطأ في عرض قائمة السحب: {e}")
 # ==================== معالجة عنوان المحفظة====================
 async def handle_wallet_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """معالجة عنوان المحفظة وإرسال طلب السحب للإدارة"""
+    """معالجة عنوان المحفظة مع نظام الإدارة"""
     try:
-        if not context.user_data.get('awaiting_wallet'):
-            return
-
-        wallet_address = update.message.text.strip()
         user_id = update.effective_user.id
-        user_name = update.effective_user.first_name or "مستخدم"
-        username = update.effective_user.username or "بدون معرف"
+        wallet_address = update.message.text.strip()
 
-        # التحقق من صحة العنوان (تبسيط)
-        if len(wallet_address) < 10:
-            await update.message.reply_text("❌ عنوان المحفظة غير صحيح. يرجى إرسال عنوان USDT (TRC20) صالح.")
+        # إرسال "جاري معالجة الطلب" فوراً
+        processing_msg = await update.message.reply_text(
+            "🔄 جاري معالجة طلبك...\n\n"
+            "سيتم مراجعة عنوان المحفظة وتفعيله خلال دقائق."
+        )
+
+        # تحقق من عنوان المحفظة
+        if len(wallet_address) < 10 or not wallet_address.startswith(('0x', '1', '3', 'bc1')):
+            await processing_msg.edit_text(
+                "❌ عنوان المحفظة غير صالح. يرجى إرسال عنوان صحيح:"
+            )
             return
 
-        withdraw_type = context.user_data.get('withdraw_type', 'profits')
-        withdraw_amount = context.user_data.get('withdraw_amount', 0)
-
-        user_data = get_user_data(user_id)
-        balance = user_data[4] if user_data else 0
-
-        # التحقق من الرصيد (بدون خصم)
-        if balance < withdraw_amount:
-            await update.message.reply_text("❌ رصيدك غير كافي للسحب.")
-            # مسح البيانات المؤقتة
-            context.user_data.clear()
-            return
-
-        # حفظ طلب السحب في قاعدة البيانات بدل الخصم الفوري
+        # حفظ في قاعدة البيانات
         conn = sqlite3.connect('trading_bot.db')
         c = conn.cursor()
-
-        # إنشاء جدول طلبات السحب إذا غير موجود
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS withdraw_requests (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                amount DECIMAL(10,2),
-                wallet_address TEXT,
-                withdraw_type TEXT,
-                status TEXT DEFAULT 'pending',
-                request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        # إضافة طلب السحب
         c.execute(
-            "INSERT INTO withdraw_requests (user_id, amount, wallet_address, withdraw_type) VALUES (?, ?, ?, ?)",
-            (user_id, withdraw_amount, wallet_address, withdraw_type)
+            'UPDATE users SET wallet_address = ? WHERE user_id = ?',
+            (wallet_address, user_id)
         )
         conn.commit()
         conn.close()
 
-        # إرسال طلب السحب لقناة الإدارة
-        app = Application.builder().token(MAIN_BOT_TOKEN).build()
+        # مسح حالة الانتظار
+        del context.user_data['awaiting_wallet']
 
+        await processing_msg.edit_text(
+            f"✅ تم استلام عنوان محفظتك بنجاح!\n\n"
+            f"📍 العنوان: {wallet_address}\n\n"
+            f"🔄 جاري المراجعة من قبل الإدارة...\n"
+            f"سيتم إعلامك فور التفعيل."
+        )
+
+        # إرسال طلب التحويل للقناة مع الأزرار
         keyboard = [
-            [InlineKeyboardButton("✅ الموافقة على السحب", callback_data=f"approve_withdraw_{user_id}_{withdraw_amount}")],
-            [InlineKeyboardButton("❌ رفض السحب", callback_data=f"reject_withdraw_{user_id}_{withdraw_amount}")],
-            [InlineKeyboardButton("📩 التواصل مع المستخدم", callback_data=f"reply_{user_id}")]
+            [InlineKeyboardButton("✅ تم التحويل", callback_data=f"confirm_transfer:{user_id}")],
+            [InlineKeyboardButton("❌ تم الرفض", callback_data=f"reject_transfer:{user_id}")],
+            [InlineKeyboardButton("📩 إرسال رسالة", callback_data=f"message_user:{user_id}")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await app.bot.send_message(
-            chat_id=ERROR_CHANNEL,
-            text=f"🔄 طلب سحب جديد\n\n"
-                 f"👤 المستخدم: {user_name} (@{username})\n"
-                 f"🆔 ID: {user_id}\n"
-                 f"💰 المبلغ: {withdraw_amount} USDT\n"
-                 f"📋 النوع: {withdraw_type}\n"
-                 f"💳 المحفظة: {wallet_address}\n\n"
-                 f"⏰ الوقت: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
+        await context.bot.send_message(
+            chat_id=ADMIN_CHAT_ID,
+            text=f"🔄 طلب تحويل جديد:\n\n"
+                 f"👤 المستخدم: {user_id}\n"
+                 f"📛 الاسم: {update.effective_user.first_name}\n"
+                 f"🔗 المستخدم: @{update.effective_user.username or 'بدون'}\n"
+                 f"📍 المحفظة: {wallet_address}\n\n"
+                 f"⏰ الوقت: {update.message.date}",
+            reply_markup=reply_markup
         )
 
-        # تأكيد للمستخدم
-        await update.message.reply_text(
-            f"✅ تم استلام طلب السحب بنجاح!\n\n"
-            f"📊 المبلغ: {withdraw_amount} USDT\n"
-            f"💳 المحفظة: {wallet_address}\n"
-            f"⏰ مدة المعالجة: 24-48 ساعة\n\n"
-            f"📞 سيتم إعلامك فور معالجة الطلب من الإدارة.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_to_main")]
-            ])
-        )
-
-        # مسح البيانات المؤقتة
-        context.user_data.clear()
-
+    except Exception as e:
+        logger.error(f"خطأ في حفظ المحفظة: {e}")
+        await update.message.reply_text("❌ حدث خطأ في حفظ المحفظة. حاول مرة أخرى.")
     except Exception as e:
         print(f"❌ خطأ في معالجة طلب السحب: {e}")
         await update.message.reply_text("❌ حدث خطأ في معالجة طلب السحب. يرجى المحاولة مرة أخرى.")
@@ -1191,6 +1159,51 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception as e:
         print(f"❌ خطأ في معالجة الزر {data}: {e}")
         await query.answer("❌ حدث خطأ، يرجى المحاولة مرة أخرى")
+
+async def handle_admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة أزرار الإدارة في القناة"""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+    user_id = int(data.split(":")[1])
+
+    if data.startswith("confirm_transfer:"):
+        # زر "تم التحويل"
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="✅ تم تحويل المبلغ بنجاح!\n\n"
+                 "شكراً لاستخدامك خدماتنا. يمكنك متابعة رصيدك من خلال الأمر /balance"
+        )
+
+        # تحديث الرسالة في القناة
+        await query.edit_message_text(
+            text=f"✅ تم التحويل للمستخدم: {user_id}\n\n"
+                 f"بواسطة: {query.from_user.first_name}",
+            reply_markup=None
+        )
+
+    elif data.startswith("reject_transfer:"):
+        # زر "تم الرفض"
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ تم رفض طلب السحب\n\n"
+                 "يرجى المحاولة لاحقاً أو التواصل مع الدعم."
+        )
+
+        # تحديث الرسالة في القناة
+        await query.edit_message_text(
+            text=f"❌ تم رفض طلب المستخدم: {user_id}\n\n"
+                 f"بواسطة: {query.from_user.first_name}",
+            reply_markup=None
+        )
+
+    elif data.startswith("message_user:"):
+        # زر "إرسال رسالة" - نطلب من الأدمن إدخال الرسالة
+        context.user_data['awaiting_user_message'] = user_id
+        await query.message.reply_text(
+            f"أدخل الرسالة التي تريد إرسالها للمستخدم {user_id}:"
+        )
 # ==================== التقارير التلقائية ====================
 async def send_daily_report():
     """إرسال تقرير يومي"""
@@ -1377,6 +1390,32 @@ async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         print(f"❌ خطأ في admin_start: {e}")
+
+async def handle_admin_to_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة رسائل الأدمن للمستخدمين"""
+    if 'awaiting_user_message' in context.user_data:
+        user_id = context.user_data['awaiting_user_message']
+        admin_message = update.message.text
+
+        try:
+            # إرسال الرسالة للمستخدم
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"📩 رسالة من الإدارة:\n\n{admin_message}"
+            )
+
+            # تأكيد للإدمن
+            await update.message.reply_text(
+                f"✅ تم إرسال الرسالة للمستخدم {user_id}"
+            )
+
+            # مسح حالة الانتظار
+            del context.user_data['awaiting_user_message']
+
+        except Exception as e:
+            await update.message.reply_text(
+                f"❌ فشل إرسال الرسالة: {e}"
+            )
 # ==================== التشغيل الرئيسي ====================
 # ==================== التشغيل ====================
 # ==================== نظام الإحالة ====================
@@ -1603,6 +1642,8 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ERROR_CHANNEL)), handle_admin_reply))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_user_messages))
     app.add_error_handler(error_handler)
+    app.add_handler(CallbackQueryHandler(handle_admin_buttons))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_to_user_message))
 
     print("🎉 البوت شغال الآن!")
     app.run_polling(
