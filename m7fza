@@ -28,6 +28,36 @@ async def show_withdraw_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
     except Exception as e:
         logger.error(f"❌ خطأ في عرض قائمة السحب: {e}")
         await send_error_notification(f"خطأ في عرض قائمة السحب: {e}")
+# ==================== نظام السحب ====================
+async def show_withdraw_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """عرض قائمة السحب"""
+    try:
+        query = update.callback_query
+        await query.answer()
+
+        user_id = query.from_user.id
+        user_data = get_user_data(user_id)
+        balance = user_data[4] if user_data else 0
+
+        keyboard = [
+            [InlineKeyboardButton("💳 سحب الأرباح (24 ساعة)", callback_data="withdraw_profits")],
+            [InlineKeyboardButton("🎁 سحب المكافآت (أسبوعي)", callback_data="withdraw_bonus")],
+            [InlineKeyboardButton("🔙 رجوع", callback_data="back_to_main")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await query.edit_message_text(
+            f"💳 نظام السحب\n\n"
+            f"💰 رصيدك الحالي: {balance:.2f} USDT\n\n"
+            f"📋 خيارات السحب:\n"
+            f"• سحب الأرباح: كل 24 ساعة (25$ - 1000$)\n"
+            f"• سحب المكافآت: كل أسبوع (لا حدود)\n\n"
+            f"اختر نوع السحب:",
+            reply_markup=reply_markup
+        )
+    except Exception as e:
+        logger.error(f"❌ خطأ في عرض قائمة السحب: {e}")
+        await send_error_notification(f"خطأ في عرض قائمة السحب: {e}")
 # ==================== معالجة عنوان المحفظة====================
 async def handle_wallet_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة عنوان المحفظة مع نظام الإدارة"""
