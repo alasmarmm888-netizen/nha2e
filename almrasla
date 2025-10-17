@@ -1,3 +1,71 @@
+async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة رسائل المستخدمين"""
+    try:
+        user_id = update.effective_user.id
+        message_text = update.message.text
+
+        # إذا كان بانتظار المحفظة - معالجتها أولاً والخروج
+        if context.user_data.get('awaiting_wallet'):
+            await handle_wallet_address(update, context)
+            return
+
+        # إذا كان بانتظار التسجيل
+        if context.user_data.get('awaiting_registration'):
+            lines = message_text.strip().split('\n')
+            if len(lines) >= 3:
+                name = lines[0].strip()
+                phone = lines[1].strip()
+                country = lines[2].strip()
+
+                # حفظ في قاعدة البيانات
+                conn = sqlite3.connect('trading_bot.db')
+                c = conn.cursor()
+                c.execute('''
+                    INSERT OR REPLACE INTO users
+                    (user_id, username, full_name, phone, country, balance, registration_date)
+                    VALUES (?, ?, ?, ?, ?, 0, datetime('now'))
+                ''', (user_id, update.effective_user.username, name, phone, country))
+                conn.commit()
+                conn.close()
+
+                # مسح حالة الانتظار
+                del context.user_data['awaiting_registration']
+
+                await update.message.reply_text(
+                    f"✅ تم تسجيلك بنجاح!\n\n"
+                    f"👤 الاسم: {name}\n"
+                    f"📞 الهاتف: {phone}\n"
+                    f"🌍 البلد: {country}\n\n"
+                    f"🚀 الآن يمكنك استخدام البوت بشكل كامل!"
+                )
+
+                # إشعار الأدمن مع الربط بالقناة
+                await send_admin_notification(
+                    f"👤 تسجيل جديد:\n"
+                    f"الاسم: {name}\n"
+                    f"الهاتف: {phone}\n"
+                    f"البلد: {country}\n"
+                    f"ID: {user_id}\n"
+                    f"@{update.effective_user.username or 'بدون'}"
+                )
+            else:
+                await update.message.reply_text(
+                    "❌ يرجى إرسال البيانات بالصيغة الصحيحة:\n\n"
+                    "الاسم الثلاثي\nرقم الهاتف\nالبلد\n\n"
+                    "مثال:\nمحمد أحمد علي\n966512345678\nالسعودية"
+                )
+            return
+
+        # إذا لا يوجد حالة انتظار - تحويل الرسالة للإدارة
+        await forward_user_messages(update, context)
+
+    except Exception as e:
+        logger.error(f"خطأ في التسجيل: {e}")
+        try:
+            await forward_user_messages(update, context)
+        except Exception as e2:
+            logger.error(f"خطأ في التحويل: {e2}")
+# ==================== نظام المراسلة ====================
 async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة ردود الأدمن من القناة للمستخدمين"""
     try:
@@ -36,7 +104,7 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
         print(f"❌ خطأ في handle_admin_reply: {e}")
         await update.message.reply_text(f"❌ فشل إرسال الرد: {e}")
 async def forward_user_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """تحويل رسائل المستخدمين للقناة"""
+    """تحويل رسائل المستخدمين للقناة - معدل"""
     try:
         # تجاهل الرسائل من القناة نفسها
         if update.effective_chat.id == int(ERROR_CHANNEL):
@@ -67,9 +135,8 @@ async def forward_user_messages(update: Update, context: ContextTypes.DEFAULT_TY
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        # إرسال الرسالة للقناة
-        app = Application.builder().token(MAIN_BOT_TOKEN).build()
-        await app.bot.send_message(
+        # ✅ إصلاح: استخدم context.bot بدل عمل Application جديد
+        await context.bot.send_message(
             chat_id=ERROR_CHANNEL,
             text=f"📬 رسالة جديدة:\n\n"
                  f"👤 الاسم: {user_name}\n"
