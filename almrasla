@@ -1,0 +1,185 @@
+async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة ردود الأدمن من القناة للمستخدمين"""
+    try:
+        print(f"🔔 رسالة من القناة للرد: {update.message.text}")
+
+        # إذا كان في مستخدم محدد للرد
+        if 'replying_to' in context.user_data:
+            target_user_id = context.user_data['replying_to']
+            admin_message = update.message.text
+
+            print(f"📤 جاري إرسال رد للمستخدم: {target_user_id}")
+
+            # إرسال الرد للمستخدم
+            app = Application.builder().token(MAIN_BOT_TOKEN).build()
+            await app.bot.send_message(
+                chat_id=target_user_id,
+                text=f"📬 رسالة من الإدارة:\n\n{admin_message}"
+            )
+
+            await update.message.reply_text(f"✅ تم إرسال الرد للمستخدم {target_user_id}")
+
+            # مسح المستخدم من الذاكرة بعد الرد
+            del context.user_data['replying_to']
+
+        else:
+            print("❌ لا يوجد مستخدم محدد للرد")
+            await update.message.reply_text(
+                "❌ لم يتم تحديد مستخدم للرد\n\n"
+                "📝 الطريقة الصحيحة:\n"
+                "1. اضغط على زر 'رد على المستخدم' في الرسالة\n"
+                "2. اكتب رسالة الرد\n"
+                "3. سيتم إرسالها تلقائياً"
+            )
+
+    except Exception as e:
+        print(f"❌ خطأ في handle_admin_reply: {e}")
+        await update.message.reply_text(f"❌ فشل إرسال الرد: {e}")
+async def forward_user_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """تحويل رسائل المستخدمين للقناة"""
+    try:
+        # تجاهل الرسائل من القناة نفسها
+        if update.effective_chat.id == int(ERROR_CHANNEL):
+            return
+
+        user_id = update.effective_user.id
+        user_name = update.effective_user.first_name or "مستخدم"
+        username = update.effective_user.username or "بدون معرف"
+
+        # تجاهل أوامر البوت
+        if update.message.text and update.message.text.startswith('/'):
+            return
+
+        # الحصول على نص الرسالة بشكل آمن
+        message_text = ""
+        if update.message.text:
+            message_text = update.message.text
+        elif update.message.caption:
+            message_text = update.message.caption
+        else:
+            message_text = "📎 رسالة ميديا"
+
+        print(f"📩 رسالة من مستخدم: {user_name} ({user_id}) - {message_text}")
+
+        # زر الرد على المستخدم
+        keyboard = [
+            [InlineKeyboardButton(f"📩 رد على {user_name}", callback_data=f"reply_{user_id}")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        # إرسال الرسالة للقناة
+        app = Application.builder().token(MAIN_BOT_TOKEN).build()
+        await app.bot.send_message(
+            chat_id=ERROR_CHANNEL,
+            text=f"📬 رسالة جديدة:\n\n"
+                 f"👤 الاسم: {user_name}\n"
+                 f"🆔 المعرف: @{username}\n"
+                 f"🔢 ID: {user_id}\n\n"
+                 f"💬 الرسالة:\n{message_text}",
+            reply_markup=reply_markup
+        )
+
+    except Exception as e:
+        print(f"❌ خطأ في forward_user_messages: {e}")
+# ===================عرض نظام المراسلة  =================
+async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """عرض نظام المراسلة"""
+    try:
+        query = update.callback_query
+        await query.answer()
+
+        text = "📩 نظام المراسلة\n\n"
+        text += "• جميع رسائل المستخدمين تصل هنا تلقائياً\n"
+        text += "• اضغط على 'رد على المستخدم' في أي رسالة\n"
+        text += "• اكتب رسالة الرد وسيتم إرسالها\n\n"
+        text += "💡 يمكنك أيضاً استخدام:\n"
+        text += "/broadcast نص_الرسالة ← للجميع\n"
+        text += "/send user_id الرسالة ← لمستخدم"
+
+        keyboard = [
+            [InlineKeyboardButton("🔄 تحديث", callback_data="messaging_system")],
+            [InlineKeyboardButton("🔙 رجوع", callback_data="back_to_admin")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await query.edit_message_text(text, reply_markup=reply_markup)
+    except Exception as e:
+        print(f"❌ خطأ في show_messaging_system: {e}")
+
+async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """بدء لوحة الأدمن المحدثة"""
+    try:
+        query = update.callback_query
+        await query.answer()
+
+        keyboard = [
+            [InlineKeyboardButton("📩 المراسلة", callback_data="messaging_system")],
+            [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
+            [InlineKeyboardButton("👥 المستخدمين", callback_data="admin_users")],
+            [InlineKeyboardButton("💰 إضافة أرباح", callback_data="add_profit_menu")],
+            [InlineKeyboardButton("🔄 تحديث", callback_data="admin_refresh")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await query.edit_message_text(
+            "🛠️ لوحة تحكم الأدمن\n\nاختر الإدارة المطلوبة:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logger.error(f"خطأ في admin_start: {e}")
+async def handle_user_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """توجيه رسائل المستخدمين المحدث"""
+    try:
+        # إذا كان بانتظار محفظة السحب
+        if context.user_data.get('awaiting_withdrawal_wallet'):
+            await handle_withdrawal_wallet(update, context)
+            return
+
+        # إذا كان بانتظار التسجيل
+        if context.user_data.get('awaiting_registration'):
+            await handle_user_registration(update, context)
+            return
+
+        # إذا كان بانتظار محفظة دائمة (إذا ما زلت تحتاجها)
+        if context.user_data.get('awaiting_wallet'):
+            await handle_wallet_address(update, context)
+            return
+
+        # إذا لا يوجد حالة انتظار - تحويل الرسالة للإدارة
+        await forward_user_messages(update, context)
+
+    except Exception as e:
+        logger.error(f"خطأ في توجيه الرسالة: {e}")
+        await update.message.reply_text("❌ حدث خطأ في معالجة رسالتك")
+
+async def handle_admin_to_user_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة رسائل الأدمن الموجهة للمستخدمين من القناة"""
+    try:
+        # التحقق إذا الرسالة من قناة الإدارة
+        if str(update.effective_chat.id) != ADMIN_CHAT_ID:
+            return
+
+        # إذا كان هناك مستخدم مستهدف للرسالة
+        if 'admin_message_target' in context.user_data:
+            user_id = context.user_data['admin_message_target']
+            admin_message = update.message.text
+
+            # إرسال الرسالة للمستخدم
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"📩 رسالة من الإدارة:\n\n{admin_message}\n\n"
+                     f"مع تحيات فريق الدعم 🌟"
+            )
+
+            # تأكيد للإدمن
+            await update.message.reply_text(
+                f"✅ تم إرسال الرسالة بنجاح إلى المستخدم {user_id}"
+            )
+
+            # مسح حالة الانتظار
+            del context.user_data['admin_message_target']
+
+    except Exception as e:
+        logger.error(f"خطأ في إرسال رسالة الأدمن: {e}")
+        await update.message.reply_text(f"❌ فشل إرسال الرسالة: {e}")
