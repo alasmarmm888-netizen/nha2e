@@ -1,97 +1,3 @@
-async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """معالجة جميع الأزرار"""
-    query = update.callback_query
-    data = query.data
-
-    try:
-        await query.answer()
-        print(f"🔘 زر مضغوط: {data}")
-
-        if data == "back_to_main":
-            await show_main_menu(update, context)
-
-        elif data == "back_to_admin":
-            await admin_start(update, context)
-
-        elif data == "subscription_plans":
-            await show_subscription_plans(update, context)
-
-        elif data == "check_balance":
-            user_id = query.from_user.id
-            user_data = get_user_data(user_id)
-            balance = user_data[4] if user_data else 0
-            await query.edit_message_text(f"💼 رصيدك الحالي: {balance:.2f} USDT")
-
-        elif data == "referral_system":
-            await show_referral_system(update, context)
-
-        elif data == "withdraw_menu":
-            await show_withdraw_menu(update, context)
-
-        # ⬇️⬇️⬇️ أضف هذا القسم ⬇️⬇️⬇️
-        elif data == "withdraw_profits":
-            await handle_withdraw_profits(update, context)
-
-        elif data == "withdraw_bonus":
-            await handle_withdraw_bonus(update, context)
-
-        elif data.startswith("withdraw_amount_"):
-            await handle_withdraw_amount(update, context)
-
-        elif data.startswith("approve_withdraw_"):
-            await handle_approve_withdraw(update, context)
-
-        elif data.startswith("reject_withdraw_"):
-            await handle_reject_withdraw(update, context)
-        # ⬆️⬆️⬆️ نهاية الإضافة ⬆️⬆️⬆️
-
-        elif data == "copy_referral_link":
-            user_id = query.from_user.id
-            referral_link = f"https://t.me/Arba7Saudi_bot?start=REF{user_id}"
-            await query.answer(f"✅ تم نسخ الرابط:\n{referral_link}", show_alert=True)
-
-        elif data.startswith("subscribe_"):
-            await handle_subscription(update, context)
-
-        elif data.startswith("confirm_payment_"):
-            await confirm_payment(update, context)
-
-        elif data.startswith("approve_sub_"):
-            await approve_subscription(update, context)
-
-        elif data == "admin_stats":
-            await admin_stats(update, context)
-
-        elif data == "admin_users":
-            await admin_users(update, context)
-
-        elif data == "admin_wallets":
-            await admin_wallets(update, context)
-
-        elif data.startswith("reply_"):
-            user_id = data.split("_")[1]
-            context.user_data['replying_to'] = user_id
-            await query.edit_message_text(
-                f"📩 جاهز للرد على المستخدم {user_id}\n\nأرسل رسالة الرد الآن:"
-            )
-
-        elif data == "messaging_system":
-            await show_messaging_system(update, context)
-
-        elif data == "admin_pending":
-            await admin_pending_requests(update, context)
-
-        elif data == "admin_refresh":
-            await send_admin_panel_to_channel()
-            await query.answer("✅ تم تحديث اللوحة")
-
-        else:
-            await query.answer("⚙️ هذه الخاصية قيد التطوير")
-
-    except Exception as e:
-        print(f"❌ خطأ في معالجة الزر {data}: {e}")
-        await query.answer("❌ حدث خطأ، يرجى المحاولة مرة أخرى")
-
 async def handle_admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة أزرار الإدارة في القناة"""
     query = update.callback_query
@@ -347,7 +253,6 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text(
             f"💬 أرسل الرسالة التي تريد إرسالها للمستخدم {user_id}:"
         )
-
 # ==================== التشغيل الرئيسي ====================
 if __name__ == "__main__":
     # تهيئة أنظمة البوت
