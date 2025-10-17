@@ -1,0 +1,382 @@
+async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """معالجة جميع الأزرار"""
+    query = update.callback_query
+    data = query.data
+
+    try:
+        await query.answer()
+        print(f"🔘 زر مضغوط: {data}")
+
+        if data == "back_to_main":
+            await show_main_menu(update, context)
+
+        elif data == "back_to_admin":
+            await admin_start(update, context)
+
+        elif data == "subscription_plans":
+            await show_subscription_plans(update, context)
+
+        elif data == "check_balance":
+            user_id = query.from_user.id
+            user_data = get_user_data(user_id)
+            balance = user_data[4] if user_data else 0
+            await query.edit_message_text(f"💼 رصيدك الحالي: {balance:.2f} USDT")
+
+        elif data == "referral_system":
+            await show_referral_system(update, context)
+
+        elif data == "withdraw_menu":
+            await show_withdraw_menu(update, context)
+
+        # ⬇️⬇️⬇️ أضف هذا القسم ⬇️⬇️⬇️
+        elif data == "withdraw_profits":
+            await handle_withdraw_profits(update, context)
+
+        elif data == "withdraw_bonus":
+            await handle_withdraw_bonus(update, context)
+
+        elif data.startswith("withdraw_amount_"):
+            await handle_withdraw_amount(update, context)
+
+        elif data.startswith("approve_withdraw_"):
+            await handle_approve_withdraw(update, context)
+
+        elif data.startswith("reject_withdraw_"):
+            await handle_reject_withdraw(update, context)
+        # ⬆️⬆️⬆️ نهاية الإضافة ⬆️⬆️⬆️
+
+        elif data == "copy_referral_link":
+            user_id = query.from_user.id
+            referral_link = f"https://t.me/Arba7Saudi_bot?start=REF{user_id}"
+            await query.answer(f"✅ تم نسخ الرابط:\n{referral_link}", show_alert=True)
+
+        elif data.startswith("subscribe_"):
+            await handle_subscription(update, context)
+
+        elif data.startswith("confirm_payment_"):
+            await confirm_payment(update, context)
+
+        elif data.startswith("approve_sub_"):
+            await approve_subscription(update, context)
+
+        elif data == "admin_stats":
+            await admin_stats(update, context)
+
+        elif data == "admin_users":
+            await admin_users(update, context)
+
+        elif data == "admin_wallets":
+            await admin_wallets(update, context)
+
+        elif data.startswith("reply_"):
+            user_id = data.split("_")[1]
+            context.user_data['replying_to'] = user_id
+            await query.edit_message_text(
+                f"📩 جاهز للرد على المستخدم {user_id}\n\nأرسل رسالة الرد الآن:"
+            )
+
+        elif data == "messaging_system":
+            await show_messaging_system(update, context)
+
+        elif data == "admin_pending":
+            await admin_pending_requests(update, context)
+
+        elif data == "admin_refresh":
+            await send_admin_panel_to_channel()
+            await query.answer("✅ تم تحديث اللوحة")
+
+        else:
+            await query.answer("⚙️ هذه الخاصية قيد التطوير")
+
+    except Exception as e:
+        print(f"❌ خطأ في معالجة الزر {data}: {e}")
+        await query.answer("❌ حدث خطأ، يرجى المحاولة مرة أخرى")
+
+async def handle_admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة أزرار الإدارة في القناة"""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+    user_id = int(data.split(":")[1])
+
+    if data.startswith("confirm_transfer:"):
+        # زر "تم التحويل"
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="✅ تم تحويل المبلغ بنجاح!\n\n"
+                 "شكراً لاستخدامك خدماتنا. يمكنك متابعة رصيدك من خلال الأمر /balance"
+        )
+
+        # تحديث الرسالة في القناة
+        await query.edit_message_text(
+            text=f"✅ تم التحويل للمستخدم: {user_id}\n\n"
+                 f"بواسطة: {query.from_user.first_name}",
+            reply_markup=None
+        )
+
+    elif data.startswith("reject_transfer:"):
+        # زر "تم الرفض"
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ تم رفض طلب السحب\n\n"
+                 "يرجى المحاولة لاحقاً أو التواصل مع الدعم."
+        )
+
+        # تحديث الرسالة في القناة
+        await query.edit_message_text(
+            text=f"❌ تم رفض طلب المستخدم: {user_id}\n\n"
+                 f"بواسطة: {query.from_user.first_name}",
+            reply_markup=None
+        )
+
+    elif data.startswith("message_user:"):
+        # زر "إرسال رسالة" - نطلب من الأدمن إدخال الرسالة
+        context.user_data['awaiting_user_message'] = user_id
+        await query.message.reply_text(
+            f"أدخل الرسالة التي تريد إرسالها للمستخدم {user_id}:"
+        )
+
+async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة أزرار الإدارة المحدثة"""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+    parts = data.split(":")
+    action = parts[0]
+
+    if data == "admin_refresh":
+        # تحديث اللوحة - الإصلاح: استخدام edit_message_text بدل send_admin_panel_to_channel
+        try:
+            keyboard = [
+                [InlineKeyboardButton("📩 المراسلة", callback_data="messaging_system")],
+                [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
+                [InlineKeyboardButton("👥 المستخدمين", callback_data="admin_users")],
+                [InlineKeyboardButton("💰 إضافة أرباح", callback_data="add_profit_menu")],
+                [InlineKeyboardButton("🔄 تحديث", callback_data="admin_refresh")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            await query.edit_message_text(
+                "🛠️ لوحة تحكم الأدمن\n\nاختر الإدارة المطلوبة:",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            await query.answer("✅ تم تحديث اللوحة")
+        except Exception as e:
+            await query.answer("❌ فشل التحديث")
+        return
+
+    if data == "add_profit_menu":
+        # فتح قائمة إضافة الأرباح
+        await query.message.reply_text(
+            "💰 إضافة أرباح للمستخدم\n\n"
+            "استخدم الأمر:\n"
+            "<code>/addprofit user_id amount</code>\n\n"
+            "مثال:\n"
+            "<code>/addprofit 123456789 150.75</code>",
+            parse_mode='HTML'
+        )
+        return
+
+    if data == "messaging_system":
+        # نظام المراسلة
+        await query.message.reply_text(
+            "📩 نظام المراسلة\n\n"
+            "لإرسال رسالة لمستخدم:\n"
+            "1. اضغط على زر 'إرسال رسالة' في أي طلب\n"
+            "2. أو استخدم /message user_id"
+        )
+        return
+
+    if data == "admin_stats":
+        # الإحصائيات
+        try:
+            conn = sqlite3.connect('trading_bot.db')
+            c = conn.cursor()
+
+            c.execute('SELECT COUNT(*) FROM users')
+            total_users = c.fetchone()[0]
+
+            c.execute('SELECT COUNT(*) FROM users WHERE date(registration_date) = date("now")')
+            new_today = c.fetchone()[0]
+
+            c.execute('SELECT SUM(balance) FROM users')
+            total_balance = c.fetchone()[0] or 0
+
+            conn.close()
+
+            await query.message.reply_text(
+                f"📊 إحصائيات البوت:\n\n"
+                f"👥 إجمالي المستخدمين: {total_users}\n"
+                f"🆕 مسجلين اليوم: {new_today}\n"
+                f"💰 إجمالي الأرصدة: {total_balance:.2f}\n"
+                f"🕒 آخر تحديث: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            )
+        except Exception as e:
+            await query.message.reply_text(f"❌ خطأ في جلب الإحصائيات: {e}")
+        return
+
+    if data == "admin_users":
+        # آخر المستخدمين
+        try:
+            conn = sqlite3.connect('trading_bot.db')
+            c = conn.cursor()
+            c.execute('SELECT user_id, full_name, registration_date FROM users ORDER BY registration_date DESC LIMIT 5')
+            users = c.fetchall()
+            conn.close()
+
+            users_text = "👥 آخر 5 مستخدمين:\n\n"
+            for user in users:
+                user_id, full_name, reg_date = user
+                users_text += f"🆔 {user_id}\n📛 {full_name or 'غير معروف'}\n📅 {reg_date}\n\n"
+
+            await query.message.reply_text(users_text)
+        except Exception as e:
+            await query.message.reply_text(f"❌ خطأ في جلب المستخدمين: {e}")
+        return
+
+    # معالجة أزرار السحب
+    if action == "confirm_withdrawal":
+
+# تأكيد السحب
+        user_id = int(parts[1])
+        amount = float(parts[2])
+        try:
+            # خصم المبلغ من رصيد المستخدم
+            conn = sqlite3.connect('trading_bot.db')
+            c = conn.cursor()
+            c.execute('UPDATE users SET balance = balance - ? WHERE user_id = ?', (amount, user_id))
+            conn.commit()
+            conn.close()
+
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"✅ تم تحويل المبلغ بنجاح إلى محفظتك!\n\n"
+                     f"💰 المبلغ: {amount}\n"
+                     f"🔄 تم خصم المبلغ من رصيدك\n\n"
+                     f"شكراً لاستخدامك خدماتنا. 🌟"
+            )
+            await query.edit_message_text(
+                text=query.message.text + f"\n\n✅ تم التحويل بواسطة {query.from_user.first_name}",
+                reply_markup=None
+            )
+        except Exception as e:
+            await query.message.reply_text(f"❌ فشل إرسال التأكيد: {e}")
+
+    elif action == "processing_withdrawal":
+        # جاري المعالجة
+        user_id = int(parts[1])
+        amount = float(parts[2])
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"🔄 جاري معالجة طلب السحب...\n\n"
+                     f"💰 المبلغ: {amount}\n"
+                     f"⏰ سيتم التحويل خلال 24 ساعة.\n\n"
+                     f"شكراً لصبرك! 🙏"
+            )
+            await query.edit_message_text(
+                text=query.message.text + f"\n\n🔄 جاري المعالجة بواسطة {query.from_user.first_name}",
+                reply_markup=None
+            )
+        except Exception as e:
+            await query.message.reply_text(f"❌ فشل إرسال التأكيد: {e}")
+
+    elif action == "reject_withdrawal":
+        # رفض السحب
+        user_id = int(parts[1])
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="❌ تم رفض طلب السحب\n\n"
+                     "يرجى التواصل مع الدعم للمزيد من المعلومات.\n"
+                     "أو حاول مرة أخرى لاحقاً."
+            )
+            await query.edit_message_text(
+                text=query.message.text + f"\n\n❌ تم الرفض بواسطة {query.from_user.first_name}",
+                reply_markup=None
+            )
+        except Exception as e:
+            await query.message.reply_text(f"❌ فشل إرسال الرفض: {e}")
+
+    elif action == "confirm_profit":
+        # تأكيد الإضافة (الأرباح)
+        user_id = int(parts[1])
+        amount = float(parts[2])
+
+        try:
+            # تحديث الرصيد في قاعدة البيانات
+            conn = sqlite3.connect('trading_bot.db')
+            c = conn.cursor()
+            c.execute(
+                'UPDATE users SET balance = balance + ? WHERE user_id = ?',
+                (amount, user_id)
+            )
+            conn.commit()
+
+            # الحصول على الرصيد الجديد
+            c.execute('SELECT balance FROM users WHERE user_id = ?', (user_id,))
+            new_balance = c.fetchone()[0]
+            conn.close()
+
+            # إرسال تأكيد للمستخدم
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"🎉 تم إضافة أرباح جديدة إلى رصيدك!\n\n"
+                     f"💰 المبلغ: {amount}\n"
+                     f"💳 الرصيد الجديد: {new_balance}\n\n"
+                     f"شكراً لثقتك بنا! 🌟"
+            )
+
+            # تحديث الرسالة في القناة
+            await query.edit_message_text(
+                text=query.message.text + f"\n\n✅ تمت الإضافة بواسطة {query.from_user.first_name}",
+                reply_markup=None
+            )
+
+        except Exception as e:
+            logger.error(f"خطأ في تأكيد الأرباح: {e}")
+            await query.message.reply_text(f"❌ فشل في إضافة الأرباح: {e}")
+
+    elif action == "message_user":
+        # إرسال رسالة للمستخدم
+        user_id = int(parts[1])
+        context.user_data['admin_message_target'] = user_id
+        await query.message.reply_text(
+            f"💬 أرسل الرسالة التي تريد إرسالها للمستخدم {user_id}:"
+        )
+
+# ==================== التشغيل الرئيسي ====================
+if __name__ == "__main__":
+    # تهيئة أنظمة البوت
+    init_referral_system()
+    print("✅ أنظمة البوت مهيأة")
+
+    app = Application.builder().token(MAIN_BOT_TOKEN).build()
+
+    # إضافة handlers الأساسية فقط
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("test", test_command))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("stats", admin_stats_command))
+    app.add_handler(CommandHandler("users", admin_users_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
+    app.add_handler(CallbackQueryHandler(handle_buttons))
+    app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ERROR_CHANNEL)), handle_admin_reply))
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_user_messages))
+    app.add_error_handler(error_handler)
+    app.add_handler(CallbackQueryHandler(handle_admin_buttons))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_to_user_message))
+    app.add_handler(CallbackQueryHandler(handle_admin_callback))
+    app.add_handler(CommandHandler("addprofit", handle_add_profit))
+    app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=ADMIN_CHAT_ID) & ~filters.COMMAND, handle_admin_to_user_message))
+    app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=ADMIN_CHAT_ID), handle_channel_commands))
+
+    print("🎉 البوت شغال الآن!")
+    app.run_polling(
+        drop_pending_updates=True,
+        close_loop=False
+    )
