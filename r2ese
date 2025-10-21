@@ -1,4 +1,3 @@
-
 import os
 import asyncio
 import logging
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 MAIN_BOT_TOKEN = "7566859808:AAFHlYo7nVIGDe6jnYIiI1EfsU-HeCntH5E"
 ARCHIVE_CHANNEL = "-1003178411340"
 ERROR_CHANNEL = "-1003091305351"
-WALLET_ADDRESS = "TYy5CnBE3k..."
+WALLET_ADDRESS = "TYy5CnBE3kJ2b7oom3vPhey8PX5mi7GQhd"
 ADMIN_CHAT_ID = "-1003178411340"
 CHANNEL_USERNAME = "@hotpum"
 # 📊 خطط الاشتراك المحدثة مع نظام الترقي
@@ -1746,9 +1745,7 @@ async def handle_all_admin_messages(update: Update, context: ContextTypes.DEFAUL
     """معالجة جميع رسائل الأدمن من القناة - نظام موحد"""
     try:
         print(f"🔔 handle_all_admin_messages called - Chat ID: {update.effective_chat.id}")
-        if context.user_data is None:
-           pass
-
+        print(f"🔔 الرسالة: {update.message.text if update.message else 'No text'}")
         # ⬇️⬇️⬇️ تأكد من تجاهل الأوامر ⬇️⬇️⬇️
         message_text = None
         if update.message and update.message.text:
@@ -2052,21 +2049,31 @@ async def handle_withdraw_inputs(update: Update, context: ContextTypes.DEFAULT_T
     """معالجة مدخلات السحب - منفصلة عن المراسلة"""
     try:
         user_id = update.effective_user.id
+        message_text = update.message.text  # ⬅️ هاد الي ناقص!
+
+        print(f"💰 handle_withdraw_inputs - User: {user_id}, Text: {message_text}")
 
         # إذا كان بانتظار إدخال مبلغ
         if context.user_data.get('awaiting_amount'):
-            print(f"💰 معالجة مبلغ السحب للمستخدم {user_id}")
+            print(f"💰 معالجة مبلغ السحب: {message_text}")
             await handle_withdraw_amount_input(update, context)
             return
 
         # إذا كان بانتظار إدخال محفظة
         if context.user_data.get('awaiting_wallet'):
-            print(f"💳 معالجة محفظة السحب للمستخدم {user_id}")
+            print(f"💳 معالجة محفظة السحب: {message_text}")
             await handle_wallet_address_input(update, context)
             return
 
+        # إذا الرسالة رقم (سحب مباشر)
+        if message_text.isdigit():
+            amount = float(message_text)
+            print(f"💰 تم التعرف على مبلغ سحب مباشر: {amount}")
+            await process_direct_withdraw(update, context, amount)
+            return
+
         # إذا لا، روح للمراسلة العادية
-        print(f"📩 تحويل رسالة عادية للمستخدم {user_id}")
+        print(f"📩 تحويل رسالة عادية: {message_text}")
         await forward_user_messages(update, context)
 
     except Exception as e:
@@ -2428,7 +2435,12 @@ async def handle_balance_command(update: Update, context: ContextTypes.DEFAULT_T
         user_data = get_user_data(user_id)
 
         if not user_data:
-            await update.message.reply_text("❌ لم يتم العثور على بياناتك. استخدم /start أولاً.")
+            await update.message.reply_text(
+                "❌ لم يتم العثور على بياناتك.\n\n"
+                "🚀 يرجى إكمال التسجيل أولاً باستخدام /start\n\n"
+                "📝 بعد التسجيل يمكنك:\n"
+                "• 📊 متابعة رصيدك\n• 💰 تحقيق الأرباح\n• 📈 الاستثمار بخططنا"
+            )
             return
 
         balance = user_data.get('balance', 0)
@@ -2437,9 +2449,25 @@ async def handle_balance_command(update: Update, context: ContextTypes.DEFAULT_T
     except Exception as e:
         logger.error(f"خطأ في أمر balance: {e}")
         await update.message.reply_text("❌ حدث خطأ في جلب الرصيد")
+
 async def handle_plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة أمر /plans"""
     try:
+        user_id = update.effective_user.id
+        user_data = get_user_data(user_id)
+
+        if not user_data:
+            await update.message.reply_text(
+                "📋 خطط الاشتراك الحصرية!\n\n"
+                "🔐 للتعرّف على خططنا المميزة، يرجى:\n"
+                "1. إكمال التسجيل باستخدام /start\n"
+                "2. التحقق من اشتراكك في القناة\n"
+                "3. إدخال بياناتك الشخصية\n\n"
+                "🎯 بعدها ستحصل على:\n"
+                "• عرض كامل للخطط\n• أرباح تصل إلى 150%\n• متابعة حصرية"
+            )
+            return
+
         # إنشاء callback query وهمية للأمر
         class MockQuery:
             def __init__(self, update):
@@ -2460,6 +2488,21 @@ async def handle_plans_command(update: Update, context: ContextTypes.DEFAULT_TYP
 async def handle_withdraw_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة أمر /withdraw"""
     try:
+        user_id = update.effective_user.id
+        user_data = get_user_data(user_id)
+
+        if not user_data:
+            await update.message.reply_text(
+                "💳 نظام السحب\n\n"
+                "⚠️ لاستخدام نظام السحب، يرجى:\n"
+                "• إكمال التسجيل باستخدام /start\n"
+                "• إدخال بياناتك الشخصية\n"
+                "• تفعيل حسابك بالكامل\n\n"
+                "💰 بعدها يمكنك:\n"
+                "• سحب أرباحك بسهولة\n• متابعة رصيدك\n• تحقيق دخل مستمر"
+            )
+            return
+
         # إنشاء callback query وهمية للأمر
         class MockQuery:
             def __init__(self, update):
@@ -2476,6 +2519,7 @@ async def handle_withdraw_command(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         logger.error(f"خطأ في أمر withdraw: {e}")
         await update.message.reply_text("💳 نظام السحب:\n\nاستخدم الزر في القائمة الرئيسية لقائمة السحب")
+
 async def handle_subscription_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة أمر /mysubscription"""
     try:
@@ -2483,13 +2527,20 @@ async def handle_subscription_command(update: Update, context: ContextTypes.DEFA
         user_data = get_user_data(user_id)
 
         if not user_data:
-            await update.message.reply_text("❌ لم يتم العثور على بياناتك. استخدم /start أولاً.")
+            await update.message.reply_text(
+                "📋 نظام الاشتراكات\n\n"
+                "🔐 لمعرفة حالة اشتراكك، يرجى:\n"
+                "1. استخدام /start للتسجيل\n"
+                "2. إدخال بياناتك الشخصية\n"
+                "3. التحقق من اشتراكك في القناة\n\n"
+                "🎯 بعد التسجيل ستحصل على:\n"
+                "• خطة اشتراك مجانية ابتدائية\n• فرصة الترقية لخطط أعلى\n• أرباح مضمونة"
+            )
             return
 
         subscription_level = user_data.get('subscription_level')
 
         if not subscription_level or subscription_level == 'basic':
-            # إذا ما عندو اشتراك نشط
             await update.message.reply_text(
                 "📋 حالة الاشتراك:\n\n"
                 "🔸 الحالة: ❌ بدون اشتراك نشط\n\n"
@@ -2503,7 +2554,6 @@ async def handle_subscription_command(update: Update, context: ContextTypes.DEFA
                 "👉 استخدم /plans لعرض جميع الخطط المتاحة"
             )
         else:
-            # إذا عنده اشتراك نشط
             if subscription_level in SUBSCRIPTION_PLANS:
                 plan_data = SUBSCRIPTION_PLANS[subscription_level]
                 plan_name = plan_data['name']
@@ -2532,9 +2582,25 @@ async def handle_subscription_command(update: Update, context: ContextTypes.DEFA
     except Exception as e:
         logger.error(f"خطأ في أمر mysubscription: {e}")
         await update.message.reply_text("📋 حدث خطأ في جلب بيانات الاشتراك")
+
 async def handle_invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة أمر /invite"""
     try:
+        user_id = update.effective_user.id
+        user_data = get_user_data(user_id)
+
+        if not user_data:
+            await update.message.reply_text(
+                "🎁 نظام الإحالة\n\n"
+                "📝 لاستخدام نظام الإحالة وكسب العمولات، يرجى:\n"
+                "• إكمال التسجيل باستخدام /start\n"
+                "• إدخال بياناتك الشخصية\n"
+                "• تفعيل حسابك بالكامل\n\n"
+                "💰 بعدها يمكنك:\n"
+                "• كسب 10% من أرباح أحالتك\n• مشاركة رابط دعوتك\n• بناء فريقك الاستثماري"
+            )
+            return
+
         # إنشاء callback query وهمية للأمر
         class MockQuery:
             def __init__(self, update):
@@ -2546,18 +2612,50 @@ async def handle_invite_command(update: Update, context: ContextTypes.DEFAULT_TY
                 await self.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
 
         mock_update = type('MockUpdate', (), {'callback_query': MockQuery(update)})()
-        await show_referral_system(mock_update, context)  # ⬅️ نفس الدالة
+        await show_referral_system(mock_update, context)
 
     except Exception as e:
         logger.error(f"خطأ في أمر invite: {e}")
         await update.message.reply_text("❌ حدث خطأ في إنشاء رابط الدعوة")
-# Handler احتياطي للتسجيل
-async def debug_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    print(f"🔍 DEBUG HANDLER - User: {user_id}, Text: {update.message.text}")
-    await handle_user_registration(update, context)
+async def master_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """دالة رئيسية تتحكم بكل الرسائل"""
+    try:
+        if not update.effective_user:
+            return
 
+        user_id = update.effective_user.id
+        message_text = update.message.text
 
+        print(f"🎯 Master Handler - User: {user_id}, Text: {message_text}")
+
+        # 1. التسجيل أولاً - استخدم الدالة الأصلية
+        if context.user_data.get(f'awaiting_registration_{user_id}'):
+            print("✅ معالجة تسجيل")
+            await handle_user_registration(update, context)  # ⬅️ الدالة الأصلية
+            return
+
+        # 2. السحب ثانياً - استخدم الدالة الأصلية
+        if context.user_data.get('awaiting_amount') or context.user_data.get('awaiting_wallet'):
+            print("💰 معالجة سحب")
+            await handle_withdraw_inputs(update, context)  # ⬅️ الدالة الأصلية
+            return
+
+        # 3. إذا الرسالة رقم (سحب مباشر)
+        if message_text and message_text.isdigit():
+            print("💰 معالجة سحب مباشر")
+            await process_direct_withdraw(update, context, float(message_text))
+            return
+
+        # 4. أخيراً: المراسلة العادية
+        print("📩 تحويل للقناة")
+        await forward_user_messages(update, context)
+
+    except Exception as e:
+        print(f"❌ خطأ في Master Handler: {e}")
+
+# واستبدل كل الـ MessageHandlers بهذا:
+#app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, master_message_handler))
+#app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
 # ==================== التشغيل الرئيسي ====================
 if __name__ == "__main__":
     init_referral_system()
@@ -2580,17 +2678,14 @@ if __name__ == "__main__":
     # 2. CommandHandler الخاص بـ addprofit في القناة فقط
     app.add_handler(CommandHandler("addprofit", handle_add_profit, filters=filters.Chat(chat_id=int(ADMIN_CHAT_ID))))
 
-
-    # 4. MessageHandlers للمستخدمين العاديين - ⬇️⬇️⬇️ غير الترتيب ⬇️⬇️⬇️
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_withdraw_inputs))    # 1. السحب أولاً
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, debug_registration))  # ⬅️ جرب هذا
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))  # 2. التسجيل ثانياً
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_user_messages))     # 3. المراسلة أخيراً
-    app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
     # 3. MessageHandlers للقناة (الأدمن)
     app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=ADMIN_CHAT_ID), handle_channel_commands))
     app.add_handler(MessageHandler(filters.ALL & filters.Chat(chat_id=int(ADMIN_CHAT_ID)), handle_all_admin_messages))
     app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ADMIN_CHAT_ID)) & ~filters.COMMAND, handle_profit_data_input))
+
+    # 4. MessageHandlers للمستخدمين العاديين - ⬇️⬇️⬇️ بس Master Handler ⬇️⬇️⬇️
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, master_message_handler))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
 
     # 5. CallbackHandler للأزرار
     app.add_handler(CallbackQueryHandler(handle_admin_callback, pattern=r"^(check_subscription|confirm_withdrawal|reject_withdrawal|message_user|admin_|confirm_transfer|reject_transfer|reply_|withdraw_|subscribe_|confirm_payment|approve_sub|back_to_|check_balance|referral_system|subscription_plans|copy_referral_link|messaging_system|admin_pending|add_profit_menu|cancel_profit|confirm_profit|withdraw_menu|back_to_main|input_profit_data|processing_withdrawal|broadcast_message|withdraw_profits|withdraw_bonus)"))
@@ -2599,4 +2694,4 @@ if __name__ == "__main__":
     app.add_error_handler(error_handler)
 
     print("🎉 البوت شغال الآن!")
-    app.run_polling(drop_pending_updates=True, close_loop=False)
+    app.run_polling(drop_pending_updates=False, close_loop=False)
