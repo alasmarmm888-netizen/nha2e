@@ -24,50 +24,58 @@ ARCHIVE_CHANNEL = "-1003178411340"
 ERROR_CHANNEL = "-1003091305351"
 WALLET_ADDRESS = "TYy5CnBE3k..."
 ADMIN_CHAT_ID = "-1003178411340"
-# 📊 خطط الاشتراك المحدثة حسب طلبك
+CHANNEL_USERNAME = "@hotpum"
+# 📊 خطط الاشتراك المحدثة مع نظام الترقي
 SUBSCRIPTION_PLANS = {
     "bronze": {
         "name": "الخطة البرونزية",
         "price": 100,
         "days": 3,
-        "profits": "10% – 20%"
+        "profits": "10% – 20%",
+        "level": 1
     },
     "silver": {
         "name": "الخطة الفضية",
         "price": 500,
         "days": 3,
-        "profits": "15% – 25%"
+        "profits": "15% – 25%",
+        "level": 2
     },
     "gold": {
         "name": "الخطة الذهبية",
         "price": 1000,
         "days": 7,
-        "profits": "20% – 35%"
+        "profits": "20% – 35%",
+        "level": 3
     },
     "platinum": {
         "name": "الخطة البلاتينية",
         "price": 5000,
         "days": 15,
-        "profits": "35% – 50%"
+        "profits": "35% – 50%",
+        "level": 4
     },
     "diamond": {
         "name": "الخطة الماسية",
         "price": 10000,
         "days": 30,
-        "profits": "50% – 80%"
+        "profits": "50% – 80%",
+        "level": 5
     },
     "royal": {
         "name": "الخطة الملكية 👑",
         "price": 20000,
         "days": 30,
         "profits": "حتى 100%",
-        "features": "متابعة خاصة من كبار الخبراء + تقارير دقيقة"
+        "features": "متابعة خاصة من كبار الخبراء + تقارير دقيقة",
+        "level": 6
     },
     "legendary": {
         "name": "الخطة الأسطورية 🏆",
         "price": 50000,
         "days": 30,
-        "profits": "120% – 150%"
+        "profits": "120% – 150%",
+        "level": 7
     }
 }
 # ==================== تهيئة قاعدة البيانات ====================
@@ -233,7 +241,7 @@ async def send_admin_notification(message):
         app = Application.builder().token(MAIN_BOT_TOKEN).build()
         admin_text = f"👨‍💼 **إشعار إداري**\n\n{message}\n\n⏰ الوقت: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         await app.bot.send_message(
-            chat_id=ERROR_CHANNEL,
+            chat_id=ADMIN_CHAT_ID,
             text=admin_text
         )
     except Exception as e:
@@ -305,47 +313,83 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user_id = update.effective_user.id
         user_name = update.effective_user.first_name
 
-        # التحقق من كود الإحالة إذا وجد
-        referral_code = None
-        if context.args and context.args[0].startswith('REF'):
-            referral_code = context.args[0]
-
-        # التحقق إذا المستخدم مسجل
+        # ⬇️⬇️⬇️ التحقق إذا المستخدم مسجل من قبل ⬇️⬇️⬇️
         user_data = get_user_data(user_id)
-
-        if not user_data:
-            # طلب بيانات التسجيل
-            context.user_data['awaiting_registration'] = True
-            if referral_code:
-                context.user_data['referral_code'] = referral_code
-
-            await update.message.reply_text(
-                f"مرحباً {user_name}! 👋\n"
-                "🔥 جاهز تبدأ رحلتك في عالم الأرباح؟\n\n"
-                "⚡ مع هذا البوت:\n"
-                "• ما تحتاج أي خبرة بالتداول 🧑‍💻\n"
-                "• صفقات احترافية تنسخ تلقائياً ✅\n"
-                "• نتائج وأرباح تشوفها بنفسك 💵\n\n"
-                "🚀 لإكمال التسجيل، يرجى إرسال:\n"
-                "1. الاسم الثلاثي\n"
-                "2. رقم الواتساب\n"
-                "3. البلد\n\n"
-                "مثال:\n"
-                "محمد أحمد علي\n"
-                "966512345678\n"
-                "السعودية"
-            )
-
-            # إشعار الأدمن بمستخدم جديد
-            await send_admin_notification(f"👤 مستخدم جديد دخل البوت: {user_name} (ID: {user_id})")
-        else:
-            # عرض القائمة الرئيسية - إصلاح هنا
+        if user_data:
+            # إذا مسجل، اعرض القائمة الرئيسية مباشرة
             await show_main_menu(update, context, user_id)
+            return
+        # ⬆️⬆️⬆️ نهاية الإضافة ⬆️⬆️⬆️
+
+        # الرسالة الترحيبية المحدثة - تنسيق احترافي
+        welcome_text = """
+<b>🏆 مرحباً بك في بوت MAF للتداول الذكي</b>
+
+<code>━━━━━━━━━━━━━━━━━━━━━━━━</code>
+
+<b>✨ لماذا نحن الأفضل في السوق؟</b>
+
+<code>▫️ 🤖 أول بوت يعمل بالذكاء الاصطناعي</code>
+<code>▫️ 💰 أرباح تصل إلى 150% شهرياً</code>
+<code>▫️ ⚡ تنفيذ صفقات فوري وآمن</code>
+<code>▫️ 🛡️ حماية كاملة لاستثمارك</code>
+<code>▫️ 📊 تحليلات حية 24/7</code>
+
+<code>━━━━━━━━━━━━━━━━━━━━━━━━</code>
+
+<b>🎯 أرقامنا تتحدث عن نفسها:</b>
+• <b>+5,000</b> مستخدم نشط
+• <b>+$2M</b> أرباح مجمعة
+• <b>98%</b> نسبة نجاح الصفقات
+
+<code>━━━━━━━━━━━━━━━━━━━━━━━━</code>
+
+<b>💎 انضم إلى النخبة وابدأ رحلتك نحو:</b>
+• ✅ <b>الاستقلال المالي</b>
+• ✅ <b>تحقيق دخل ثابت</b>
+• ✅ <b>بناء مستقبل آمن</b>
+
+<code>━━━━━━━━━━━━━━━━━━━━━━━━</code>
+
+<b>🚀 لن تكون نفس الشخص بعد اليوم!</b>
+<i>ابدأ الآن وشاهد تحول حياتك المالية</i>
+        """
+
+        # إرسال الصورة مع النص المنسق
+        photo_url = 'https://up6.cc/2025/10/17609823650161.png'
+
+        await update.message.reply_photo(
+            photo=photo_url,
+            caption=welcome_text,
+            parse_mode='HTML'
+        )
+
+        # طلب الاشتراك في القناة
+        keyboard = [
+            [InlineKeyboardButton("📢 انضم للقناة أولاً", url=f"https://t.me/{CHANNEL_USERNAME[1:]}")],
+            [InlineKeyboardButton("✅ تحقق من الاشتراك", callback_data="check_subscription")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            "🔐 <b>الوصول الحصري يشترط الاشتراك في قناتنا</b>\n\n"
+            "📢 <i>انضم الآن لتفعيل حسابك والحصول على:</i>\n"
+            "• 📈 إشعارات الصفقات الحية\n"
+            "• 💡 استراتيجيات حصرية\n"
+            "• 🎁 عروض خاصة للأعضاء\n\n"
+            "➡️ <b>بعد الانضمام، اضغط على زر التحقق</b>",
+            reply_markup=reply_markup,
+            parse_mode='HTML'
+        )
+
+        # حفظ بيانات المستخدم
+        context.user_data['pending_user_id'] = user_id
+        if context.args and context.args[0].startswith('REF'):
+            context.user_data['pending_referral'] = context.args[0]
 
     except Exception as e:
         logger.error(f"❌ خطأ في أمر start: {e}")
         await send_error_notification(f"خطأ في أمر start: {e}")
-
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int = None) -> None:
     """عرض القائمة الرئيسية"""
     try:
@@ -359,7 +403,10 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, use
             await update.message.reply_text("❌ لم يتم العثور على بيانات المستخدم. يرجى إعادة التسجيل.")
             return
 
-        balance = user_data['balance'] if user_data else 0
+        balance = user_data['balance'] if user_data else 0.0
+
+        # 🔥 الجديد: جلب إحصائيات الإحالة
+        referral_count, total_commissions = get_referral_stats(user_id)
 
         keyboard = [
             [InlineKeyboardButton("💼 خطط الاشتراك", callback_data="subscription_plans")],
@@ -369,19 +416,24 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, use
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
+        # 🔥 الجديد: نص القائمة مع إحصائيات الإحالة
+        menu_text = (
+            f"مرحباً بعودتك! 👋\n"
+            f"💼 محفظتك: {balance:.2f} USDT\n"
+            f"👥 أحالتك: {referral_count} شخص\n"
+            f"🎁 عمولاتك: {total_commissions:.2f} USDT\n\n"
+            f"اختر من القائمة:"
+        )
+
         # تحديد نوع الرسالة (message أو callback_query)
         if update.callback_query:
             await update.callback_query.edit_message_text(
-                f"مرحباً بعودتك! 👋\n"
-                f"💼 محفظتك: {balance:.2f} USDT\n\n"
-                "اختر من القائمة:",
+                menu_text,
                 reply_markup=reply_markup
             )
         else:
             await update.message.reply_text(
-                f"مرحباً بعودتك! 👋\n"
-                f"💼 محفظتك: {balance:.2f} USDT\n\n"
-                "اختر من القائمة:",
+                menu_text,
                 reply_markup=reply_markup
             )
 
@@ -399,17 +451,23 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, use
 # ==================== معالجة تسجيل البيانات ====================
 async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة رسائل المستخدمين"""
+    if not update.effective_user:
+        return
     try:
         user_id = update.effective_user.id
         message_text = update.message.text
-
+        print(f"🎯 handle_user_registration CALLED - User: {user_id}")
+        print(f"🎯 Message: {message_text}")
+        print(f"🎯 awaiting_registration: {context.user_data.get(f'awaiting_registration_{user_id}')}")
         # إذا كان بانتظار المحفظة - معالجتها أولاً والخروج
         if context.user_data.get('awaiting_wallet'):
+            print("🔔 Processing wallet address")
             await handle_wallet_address(update, context)
             return
 
         # إذا كان بانتظار التسجيل
-        if context.user_data.get('awaiting_registration'):
+        if context.user_data.get(f'awaiting_registration_{user_id}'):
+            print("🔔 Processing registration data")
             lines = message_text.strip().split('\n')
             if len(lines) >= 3:
                 name = lines[0].strip()
@@ -428,7 +486,7 @@ async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT
                 conn.close()
 
                 # مسح حالة الانتظار
-                del context.user_data['awaiting_registration']
+                del context.user_data[f'awaiting_registration_{user_id}']
 
                 await update.message.reply_text(
                     f"✅ تم تسجيلك بنجاح!\n\n"
@@ -437,7 +495,7 @@ async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT
                     f"🌍 البلد: {country}\n\n"
                     f"🚀 الآن يمكنك استخدام البوت بشكل كامل!"
                 )
-
+                await show_main_menu(update, context, user_id)
                 # إشعار الأدمن مع الربط بالقناة
                 await send_admin_notification(
                     f"👤 تسجيل جديد:\n"
@@ -466,24 +524,38 @@ async def handle_user_registration(update: Update, context: ContextTypes.DEFAULT
             logger.error(f"خطأ في التحويل: {e2}")
 # ==================== عرض خطط الاشتراك ====================
 async def show_subscription_plans(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """عرض جميع خطط الاشتراك - معدل"""
+    """عرض جميع خطط الاشتراك - مع نظام الترقي"""
     try:
         query = update.callback_query
         await query.answer()
 
+        user_id = query.from_user.id
+        user_data = get_user_data(user_id)
+        current_plan = user_data.get('subscription_level') if user_data else None
+
         keyboard = []
         for plan_id, plan in SUBSCRIPTION_PLANS.items():
+            plan_text = f"{plan['name']} - {plan['price']} USDT"
+
+            # إذا كانت هذه خطته الحالية
+            if current_plan == plan_id:
+                plan_text = f"✅ {plan_text} (خطتك الحالية)"
+            # إذا كانت خطة أدنى من خطته
+            elif current_plan and plan['level'] <= SUBSCRIPTION_PLANS.get(current_plan, {}).get('level', 0):
+                plan_text = f"❌ {plan_text} (غير متاح)"
+
             keyboard.append([
-                InlineKeyboardButton(
-                    f"{plan['name']} - {plan['price']} USDT",
-                    callback_data=f"subscribe_{plan_id}"
-                )
+                InlineKeyboardButton(plan_text, callback_data=f"subscribe_{plan_id}")
             ])
 
         keyboard.append([InlineKeyboardButton("🔙 رجوع", callback_data="back_to_main")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         plans_text = "💼 خطط الاشتراك المتاحة:\n\n"
+        if current_plan and current_plan != 'basic':
+            current_plan_name = SUBSCRIPTION_PLANS.get(current_plan, {}).get('name', 'غير معروفة')
+            plans_text += f"📋 خطتك الحالية: {current_plan_name}\n\n"
+
         for plan_id, plan in SUBSCRIPTION_PLANS.items():
             plans_text += f"🔹 {plan['name']}\n"
             plans_text += f"💰 السعر: {plan['price']} USDT\n"
@@ -491,6 +563,11 @@ async def show_subscription_plans(update: Update, context: ContextTypes.DEFAULT_
             plans_text += f"📈 الأرباح المتوقعة: {plan['profits']}\n"
             if 'features' in plan:
                 plans_text += f"⭐ {plan['features']}\n"
+
+            # إضافة إشارة إذا كانت الخطة غير متاحة
+            if current_plan and plan['level'] <= SUBSCRIPTION_PLANS.get(current_plan, {}).get('level', 0):
+                plans_text += f"🚫 غير متاح للترقية\n"
+
             plans_text += "\n"
 
         await query.edit_message_text(plans_text, reply_markup=reply_markup)
@@ -499,14 +576,31 @@ async def show_subscription_plans(update: Update, context: ContextTypes.DEFAULT_
         await send_error_notification(f"خطأ في عرض خطط الاشتراك: {e}")
 # ==================== معالجة الاشتراك ====================
 async def handle_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """معالجة طلب الاشتراك - معدل"""
+    """معالجة طلب الاشتراك - مع نظام الترقي"""
     try:
         query = update.callback_query
         plan_id = query.data.split("_")[1]
         plan = SUBSCRIPTION_PLANS[plan_id]
+        user_id = query.from_user.id
 
         await query.answer()
 
+        # جلب بيانات المستخدم الحالية
+        user_data = get_user_data(user_id)
+        current_plan = user_data.get('subscription_level') if user_data else None
+
+        # التحقق إذا المستخدم مشترك مسبقاً
+        if current_plan and current_plan != 'basic':
+            current_plan_level = SUBSCRIPTION_PLANS.get(current_plan, {}).get('level', 0)
+            new_plan_level = plan['level']
+
+            # إذا حاول يشترك بخطة أدنى أو مساوية لخطته الحالية
+            if new_plan_level <= current_plan_level:
+                current_plan_name = SUBSCRIPTION_PLANS.get(current_plan, {}).get('name', 'غير معروفة')
+                await query.answer(f"❌ لديك خطة {current_plan_name} نشطة. يمكنك الترقية فقط!", show_alert=True)
+                return
+
+        # إذا كلشي تمام، تابع العملية العادية
         subscription_text = (
             f"🎉 تم اختيار خطتك بنجاح!\n\n"
             f"🔹 الخطة: {plan['name']}\n"
@@ -519,6 +613,11 @@ async def handle_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE
             subscription_text += f"⭐ المميزات: {plan['features']}\n\n"
         else:
             subscription_text += "\n"
+
+        # إضافة معلومات الترقي إذا كان هناك ترقية
+        if current_plan and current_plan != 'basic':
+            current_plan_name = SUBSCRIPTION_PLANS.get(current_plan, {}).get('name', 'غير معروفة')
+            subscription_text += f"🔄 أنت تقوم بترقية اشتراكك من {current_plan_name}\n\n"
 
         subscription_text += (
             f"💡 للمتابعة يرجى إتمام عملية الدفع على العنوان التالي:\n"
@@ -538,14 +637,17 @@ async def handle_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.edit_message_text(subscription_text, reply_markup=reply_markup, parse_mode='Markdown')
 
         # إشعار الأدمن بطلب اشتراك
-        user = get_user_data(query.from_user.id)
-        user_name = user['full_name'] if user else query.from_user.first_name
+        user_name = user_data['full_name'] if user_data else query.from_user.first_name
+        notification_type = "ترقية" if current_plan and current_plan != 'basic' else "جديد"
+        current_plan_name = SUBSCRIPTION_PLANS.get(current_plan, {}).get('name', 'غير مشترك') if current_plan else 'غير مشترك'
+
         await send_admin_notification(
-            f"🔄 طلب اشتراك جديد\n"
+            f"🔄 طلب اشتراك {notification_type}\n"
             f"👤 المستخدم: {user_name}\n"
-            f"🆔 الأيدي: {query.from_user.id}\n"
+            f"🆔 الأيدي: {user_id}\n"
             f"📋 الخطة: {plan['name']}\n"
-            f"💰 المبلغ: {plan['price']} USDT"
+            f"💰 المبلغ: {plan['price']} USDT\n"
+            f"📈 من خطة: {current_plan_name}"
         )
     except Exception as e:
         logger.error(f"❌ خطأ في معالجة الاشتراك: {e}")
@@ -608,7 +710,7 @@ async def handle_payment_proof(update: Update, context: ContextTypes.DEFAULT_TYP
             )
 
             await context.bot.send_photo(
-                chat_id=ERROR_CHANNEL,
+                chat_id=ADMIN_CHAT_ID,
                 photo=update.message.photo[-1].file_id,
                 caption=caption,
                 reply_markup=reply_markup
@@ -960,6 +1062,32 @@ async def approve_subscription(update: Update, context: ContextTypes.DEFAULT_TYP
         # إضافة المعاملة
         c.execute("INSERT INTO transactions (user_id, type, amount, status, transaction_date) VALUES (?, ?, ?, ?, ?)",
                   (user_id, "deposit", plan['price'], "completed", datetime.now()))
+
+        # 🔥 الجديد: إضافة عمولة الإحالة إذا كان هناك محيل
+        c.execute("SELECT referred_by FROM users WHERE user_id = ?", (user_id,))
+        result = c.fetchone()
+        if result and result[0]:
+            referrer_id = result[0]
+            commission = plan['price'] * 0.10  # 10% عمولة
+            # إضافة العمولة للمحيل
+            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (commission, referrer_id))
+            # تسجيل العملية في جدول referrals
+            c.execute('''INSERT INTO referrals (referrer_id, referred_id, commission_earned, referral_date)
+                         VALUES (?, ?, ?, ?)''', (referrer_id, user_id, commission, date.today()))
+            # إضافة معاملة للمحيل
+            c.execute('''INSERT INTO transactions (user_id, type, amount, status, transaction_date)
+                         VALUES (?, ?, ?, ?, ?)''', (referrer_id, "referral_commission", commission, "completed", datetime.now()))
+
+            # إشعار المحيل
+            try:
+                app = Application.builder().token(MAIN_BOT_TOKEN).build()
+                await app.bot.send_message(
+                    chat_id=referrer_id,
+                    text=f"🎉 حصلت على عمولة إحالة!\n\n💰 المبلغ: {commission:.2f} USDT\n👤 من: المستخدم {user_id}\n📋 الخطة: {plan['name']}"
+                )
+            except Exception as e:
+                logger.error(f"❌ فشل إرسال إشعار العمولة: {e}")
+
         conn.commit()
         conn.close()
 
@@ -977,14 +1105,13 @@ async def approve_subscription(update: Update, context: ContextTypes.DEFAULT_TYP
                      f"📋 الخطة: {plan['name']}\n"
                      f"💰 الرصيد المضاف: {plan['price']} USDT\n"
                      f"⏳ المدة: {plan['days']} يوم\n\n"
-                     f"يمكنك الآن بدء التداول والاستفادة من الخدمة!"
+                     f"🎉📈 رصيدك الان بدأ في اول جلسة تداول"
             )
         except Exception as e:
             await send_error_notification(f"خطأ في إرسال إشعار للمستخدم {user_id}: {e}")
     except Exception as e:
         logger.error(f"❌ خطأ في تأكيد الاشتراك: {e}")
         await send_error_notification(f"خطأ في تأكيد الاشتراك: {e}")
-
 # ==================== نظام إدارة المحافظ ====================
 async def admin_wallets(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """إدارة محافظ الاستلام"""
@@ -1018,6 +1145,7 @@ async def send_admin_panel_to_channel(context: ContextTypes.DEFAULT_TYPE = None)
     try:
         keyboard = [
             [InlineKeyboardButton("📩 المراسلة", callback_data="messaging_system")],
+            [InlineKeyboardButton("📢 رسالة جماعية", callback_data="broadcast_message")],
             [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
             [InlineKeyboardButton("👥 المستخدمين", callback_data="admin_users")],
             [InlineKeyboardButton("💰 إضافة أرباح", callback_data="add_profit_menu")],
@@ -1092,12 +1220,108 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     parts = data.split(":")
     action = parts[0]
+    if data == "check_subscription":
+        user_id = query.from_user.id
+        print(f"🎯 زر التحقق مضغوط - المستخدم: {user_id}")
 
+        async def check_sub(user_id):
+            try:
+                print(f"🔍 جاري التحقق من الاشتراك في {CHANNEL_USERNAME}")
+                member = await context.bot.get_chat_member(chat_id=CHANNEL_USERNAME, user_id=user_id)
+                print(f"🔍 حالة المستخدم: {member.status}")
+                return member.status in ['member', 'administrator', 'creator']
+            except Exception as e:
+                print(f"❌ خطأ في التحقق: {e}")
+                return False
+
+        if await check_sub(user_id):
+            print("✅ المستخدم مشترك")
+
+            referral_code = context.user_data.get('pending_referral')
+
+            await query.edit_message_text(
+                f"مرحباً {query.from_user.first_name}! 👋\n"
+                "🚀 <b>لإكمال التسجيل، يرجى إرسال:</b>\n"
+                "1. الاسم الثلاثي\n"
+                "2. رقم الواتساب\n"
+                "3. البلد\n\n"
+                "📝 <b>مثال:</b>\n"
+                "محمد أحمد علي\n"
+                "966512345678\n"
+                "السعودية\n\n"
+                "🔒 <b>ملاحظة:</b> نطلب هذه البيانات لتأكيد هويتك وضمان حقوقك في النظام",
+                parse_mode='HTML'
+            )
+
+            context.user_data[f'awaiting_registration_{user_id}'] = True
+            print(f"🔔 تم تعيين awaiting_registration_{user_id} = True")
+            if referral_code:
+                context.user_data['referral_code'] = referral_code
+
+        else:
+            print("❌ المستخدم غير مشترك")
+            await query.answer("❌ لم تنضم للقناة بعد! يرجى الانضمام أولاً", show_alert=True)
+        return
+
+    if data.startswith("subscribe_"):
+        print(f"🎯 تم التعرف على subscribe_: {data}")
+        await handle_subscription(update, context)
+        return
+
+    if data.startswith("confirm_payment_"):
+        await query.answer()
+        print(f"🎯 تم التعرف على confirm_payment_: {data} - جاري استدعاء confirm_payment")
+        await confirm_payment(update, context)
+        return
+
+    if data.startswith("approve_sub_"):
+        print(f"🎯 تم التعرف على approve_sub_: {data} - جاري استدعاء approve_subscription")
+        await approve_subscription(update, context)
+        return
+
+    if data.startswith("reject_sub_"):
+        print(f"🎯 تم التعرف على reject_sub_: {data} - جاري معالجة الرفض")
+        user_id = int(data.split("_")[2])
+        await query.edit_message_text(f"❌ تم رفض اشتراك المستخدم {user_id}")
+        return
+
+       # ========== أزرار المستخدم الأساسية ==========
+    if data in ["subscription_plans", "check_balance", "referral_system", "withdraw_menu", "withdraw_profits", "withdraw_bonus", "back_to_main"]:
+        user_id = query.from_user.id
+
+        if data == "subscription_plans":
+            await show_subscription_plans(update, context)
+
+        elif data == "check_balance":
+            user_data = get_user_data(user_id)
+            balance = user_data['balance'] if user_data and user_data['balance'] else 0.0
+            await query.edit_message_text(f"💼 رصيدك الحالي: {balance:.2f} USDT")
+
+        elif data == "referral_system":
+            await show_referral_system(update, context)
+
+        elif data == "withdraw_menu":
+            await show_withdraw_menu(update, context)
+
+        elif data == "withdraw_profits":
+            await handle_withdraw_profits(update, context)
+
+        elif data == "withdraw_bonus":
+            await handle_withdraw_bonus(update, context)
+
+        elif data == "back_to_main":
+            await show_main_menu(update, context, user_id)
+
+
+
+        return
+# ========== نهاية أزرار المستخدم ==========
     if data == "admin_refresh":
         # تحديث اللوحة - الإصلاح الآمن
         try:
             keyboard = [
                 [InlineKeyboardButton("📩 المراسلة", callback_data="messaging_system")],
+                [InlineKeyboardButton("📢 رسالة جماعية", callback_data="broadcast_message")],
                 [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
                 [InlineKeyboardButton("👥 المستخدمين", callback_data="admin_users")],
                 [InlineKeyboardButton("💰 إضافة أرباح", callback_data="add_profit_menu")],
@@ -1120,28 +1344,27 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
             await query.answer("❌ فشل التحديث")
         return
 
-    if data == "add_profit_menu":
-        # فتح قائمة إضافة الأرباح
-        await query.message.reply_text(
-            "💰 إضافة أرباح للمستخدم\n\n"
-            "استخدم الأمر:\n"
-            "<code>/addprofit user_id amount</code>\n\n"
-            "مثال:\n"
-            "<code>/addprofit 123456789 150.75</code>",
-            parse_mode='HTML'
-        )
-        return
-
     if data == "messaging_system":
-        # نظام المراسلة
+        # نظام المراسلة الجديد
+        chat_id = str(update.effective_chat.id)
+
+        # ✅ حفظ في قاعدة البيانات
+        conn = sqlite3.connect('trading_bot.db')
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO admin_messages (chat_id, target_user_id, message_type)
+            VALUES (?, ?, ?)
+        ''', (chat_id, 0, 'awaiting_user_id'))  # ⬅️ نوع جديد
+        conn.commit()
+        conn.close()
+
         await query.message.reply_text(
-            "📩 نظام المراسلة\n\n"
-            "لإرسال رسالة لمستخدم:\n"
-            "1. اضغط على زر 'إرسال رسالة' في أي طلب\n"
-            "2. أو استخدم /message user_id"
+            "👤 إرسال رسالة لمستخدم\n\n"
+            "📝 أرسل أيدي المستخدم المستهدف:\n\n"
+            "مثال:\n"
+            "767016290"
         )
         return
-
     if data == "admin_stats":
         # الإحصائيات
         try:
@@ -1180,6 +1403,19 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
             "📝 أو اضغط على زر 'تأكيد الإضافة' في أي طلب أرباح",
             parse_mode='HTML'
         )
+        return
+    if data == "input_profit_data":
+        await query.message.reply_text(
+            "📥 إدخال بيانات الإضافة:\n\n"
+            "يرجى إرسال البيانات بالصيغة:\n"
+            "<code>user_id amount</code>\n\n"
+            "مثال:\n"
+            "<code>763916290 150</code>\n\n"
+            "سيتم تحويلها تلقائياً لأمر الإضافة",
+            parse_mode='HTML'
+        )
+        # حفظ حالة الانتظار
+        context.user_data['awaiting_profit_data'] = True
         return
     if data == "admin_users":
         # آخر المستخدمين
@@ -1455,7 +1691,14 @@ async def scheduler_background():
 
 async def forward_user_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """تحويل رسائل المستخدمين للقناة - معدل"""
+    if not update.effective_user:
+        return
     try:
+        user_id = update.effective_user.id
+        if context.user_data.get(f'awaiting_registration_{user_id}'):
+            print(f"🔔 توقف - المستخدم {user_id} بانتظار تسجيل")
+            return  # توقف إذا في انتظار تسجيل
+
         # تجاهل الرسائل من القناة نفسها
         if update.effective_chat.id == int(ADMIN_CHAT_ID):
             return
@@ -1503,6 +1746,8 @@ async def handle_all_admin_messages(update: Update, context: ContextTypes.DEFAUL
     """معالجة جميع رسائل الأدمن من القناة - نظام موحد"""
     try:
         print(f"🔔 handle_all_admin_messages called - Chat ID: {update.effective_chat.id}")
+        if context.user_data is None:
+           pass
 
         # ⬇️⬇️⬇️ تأكد من تجاهل الأوامر ⬇️⬇️⬇️
         message_text = None
@@ -1533,15 +1778,98 @@ async def handle_all_admin_messages(update: Update, context: ContextTypes.DEFAUL
         result = c.fetchone()
         conn.close()
 
-        print(f"🔔 نتيجة query الداتابيز: {result}")  # ⬅️ هذا السطر مهم!
+        print(f"🔔 نتيجة query الداتابيز: {result}")
 
+        print(f"🔔 نتيجة query الداتابيز: {result}")
+
+    # ========== 🆕 النظام الجديد باستخدام قاعدة البيانات ==========
+
+        # 1. إذا كان بانتظار أيدي المستخدم
+        if result and result[1] == 'awaiting_user_id':
+            try:
+                target_user_id = int(message_text)
+
+                # التحقق إذا المستخدم موجود
+                user_data = get_user_data(target_user_id)
+                if not user_data:
+                    await context.bot.send_message(
+                        chat_id=update.effective_chat.id,
+                        text="❌ المستخدم غير موجود في قاعدة البيانات"
+                    )
+                    return
+
+                # تحديث قاعدة البيانات للرسالة
+                conn = sqlite3.connect('trading_bot.db')
+                c = conn.cursor()
+                c.execute('''
+                    UPDATE admin_messages
+                    SET target_user_id = ?, message_type = ?
+                    WHERE chat_id = ? AND message_type = 'awaiting_user_id'
+                ''', (target_user_id, 'awaiting_message', chat_id))
+                conn.commit()
+                conn.close()
+
+                user_name = user_data['full_name'] or f"المستخدم {target_user_id}"
+
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"✅ تم تحديد المستخدم: {user_name}\n\n"
+                         f"🆔 الأيدي: {target_user_id}\n\n"
+                         f"📝 الآن اكتب نص الرسالة:"
+                )
+                return
+
+            except ValueError:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="❌ أيدي غير صحيح. يرجى إرسال أرقام فقط."
+                )
+                return
+
+        # 2. إذا كان بانتظار نص الرسالة
+        if result and result[1] == 'awaiting_message':
+            target_user_id = result[0]  # الأيدي من قاعدة البيانات
+
+            try:
+                # إرسال الرسالة للمستخدم
+                await context.bot.send_message(
+                    chat_id=target_user_id,
+                    text=f"📩 رسالة من الإدارة:\n\n{message_text}\n\n"
+                         f"مع تحيات فريق الدعم 🌟"
+                )
+
+                # تأكيد للأدمن
+                user_data = get_user_data(target_user_id)
+                user_name = user_data['full_name'] if user_data else f"المستخدم {target_user_id}"
+
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"✅ تم إرسال الرسالة بنجاح\n\n"
+                         f"👤 إلى: {user_name}\n"
+                         f"🆔 الأيدي: {target_user_id}\n\n"
+                         f"💬 الرسالة:\n{message_text}"
+                )
+
+               # مسح من قاعدة البيانات
+                conn = sqlite3.connect('trading_bot.db')
+                c = conn.cursor()
+                c.execute('DELETE FROM admin_messages WHERE chat_id = ?', (chat_id,))
+                conn.commit()
+                conn.close()
+
+            except Exception as e:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"❌ فشل إرسال الرسالة: {e}"
+                )
+            return
+
+        # ========== النظام الحالي (يبقى كما هو) ==========
         # 1. أولوية: إذا كان في رد على مستخدم
         if result and result[1] == 'reply':
             target_user_id = result[0]
-
             print(f"📤 جاري إرسال رد للمستخدم: {target_user_id}")
 
-            # إرسال الرد للمستخدم
             try:
                 await context.bot.send_message(
                     chat_id=target_user_id,
@@ -1555,7 +1883,7 @@ async def handle_all_admin_messages(update: Update, context: ContextTypes.DEFAUL
                 )
                 print(f"✅ تم إرسال الرد بنجاح للمستخدم {target_user_id}")
 
-                # ✅ مسح من قاعدة البيانات بعد الإرسال
+                # مسح من قاعدة البيانات
                 conn = sqlite3.connect('trading_bot.db')
                 c = conn.cursor()
                 c.execute('DELETE FROM admin_messages WHERE chat_id = ? AND target_user_id = ?',
@@ -1574,10 +1902,8 @@ async def handle_all_admin_messages(update: Update, context: ContextTypes.DEFAUL
         # 2. إذا كان في رسالة فردية
         if result and result[1] == 'individual':
             target_user_id = result[0]
-
             print(f"📤 جاري إرسال رسالة فردية للمستخدم: {target_user_id}")
 
-            # إرسال الرسالة للمستخدم
             try:
                 await context.bot.send_message(
                     chat_id=target_user_id,
@@ -1591,7 +1917,7 @@ async def handle_all_admin_messages(update: Update, context: ContextTypes.DEFAUL
                 )
                 print(f"✅ تم إرسال الرسالة بنجاح للمستخدم {target_user_id}")
 
-                # ✅ مسح من قاعدة البيانات بعد الإرسال
+                # مسح من قاعدة البيانات
                 conn = sqlite3.connect('trading_bot.db')
                 c = conn.cursor()
                 c.execute('DELETE FROM admin_messages WHERE chat_id = ? AND target_user_id = ?',
@@ -1611,22 +1937,50 @@ async def handle_all_admin_messages(update: Update, context: ContextTypes.DEFAUL
         if result and result[1] == 'broadcast':
             print(f"📤 جاري إرسال رسالة جماعية لجميع المستخدمين")
 
-            # هنا رح تضيف كود إرسال للجميع
-            # await send_broadcast_to_all_users(message_text)
+            try:
+                # جلب جميع المستخدمين النشطين
+                conn = sqlite3.connect('trading_bot.db')
+                c = conn.cursor()
+                c.execute('SELECT user_id FROM users WHERE is_active = 1 OR is_active IS NULL')
+                users = c.fetchall()
+                conn.close()
 
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=f"📢 جاري إرسال الرسالة لجميع المستخدمين..."
-            )
-            print(f"✅ تم إرسال الرسالة الجماعية")
+                sent_count = 0
+                failed_count = 0
 
-            # ✅ مسح من قاعدة البيانات بعد الإرسال
-            conn = sqlite3.connect('trading_bot.db')
-            c = conn.cursor()
-            c.execute('DELETE FROM admin_messages WHERE chat_id = ? AND message_type = ?',
-                     (chat_id, 'broadcast'))
-            conn.commit()
-            conn.close()
+                for user in users:
+                    try:
+                        await context.bot.send_message(
+                            chat_id=user[0],
+                            text=f"📢 إشعار من الإدارة:\n\n{message_text}\n\n"
+                                 f"مع تحيات فريق الدعم 🌟"
+                        )
+                        sent_count += 1
+                    except Exception as e:
+                        failed_count += 1
+
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"✅ تم إرسال الرسالة الجماعية\n\n"
+                         f"📊 النتائج:\n"
+                         f"• ✅ تم الإرسال: {sent_count} مستخدم\n"
+                         f"• ❌ فشل الإرسال: {failed_count} مستخدم"
+                )
+
+                # مسح من قاعدة البيانات
+                conn = sqlite3.connect('trading_bot.db')
+                c = conn.cursor()
+                c.execute('DELETE FROM admin_messages WHERE chat_id = ? AND message_type = ?',
+                         (chat_id, 'broadcast'))
+                conn.commit()
+                conn.close()
+
+            except Exception as e:
+                logger.error(f"❌ خطأ في الإرسال الجماعي: {e}")
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"❌ فشل الإرسال الجماعي: {e}"
+                )
             return
 
         # 4. إذا لا يوجد حالة انتظار
@@ -1647,7 +2001,6 @@ async def handle_all_admin_messages(update: Update, context: ContextTypes.DEFAUL
             )
         except:
             pass
-
 # ===================عرض نظام المراسلة  =================
 async def show_messaging_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """عرض نظام المراسلة"""
@@ -1695,7 +2048,29 @@ async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.error(f"خطأ في admin_start: {e}")
+async def handle_withdraw_inputs(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة مدخلات السحب - منفصلة عن المراسلة"""
+    try:
+        user_id = update.effective_user.id
 
+        # إذا كان بانتظار إدخال مبلغ
+        if context.user_data.get('awaiting_amount'):
+            print(f"💰 معالجة مبلغ السحب للمستخدم {user_id}")
+            await handle_withdraw_amount_input(update, context)
+            return
+
+        # إذا كان بانتظار إدخال محفظة
+        if context.user_data.get('awaiting_wallet'):
+            print(f"💳 معالجة محفظة السحب للمستخدم {user_id}")
+            await handle_wallet_address_input(update, context)
+            return
+
+        # إذا لا، روح للمراسلة العادية
+        print(f"📩 تحويل رسالة عادية للمستخدم {user_id}")
+        await forward_user_messages(update, context)
+
+    except Exception as e:
+        logger.error(f"❌ خطأ في معالجة مدخلات السحب: {e}")
 # ==================== التشغيل الرئيسي ====================
 # ==================== التشغيل ====================
 async def handle_add_profit(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1710,7 +2085,6 @@ async def handle_add_profit(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         if len(context.args) != 2:
-            # ✅ استخدام context.bot.send_message بدل update.message.reply_text
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="📊 إضافة أرباح للمستخدم:\n\n"
@@ -1722,13 +2096,19 @@ async def handle_add_profit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_user_id = int(context.args[0])
         amount = float(context.args[1])
 
+        print(f"🔍 جاري البحث عن المستخدم: {target_user_id}")
+
         # الحصول على بيانات المستخدم
         conn = sqlite3.connect('trading_bot.db')
         c = conn.cursor()
         c.execute('SELECT username, full_name, balance FROM users WHERE user_id = ?', (target_user_id,))
         user_data = c.fetchone()
+        conn.close()
+
+        print(f"🔍 نتيجة البحث في الداتابيز: {user_data}")
 
         if not user_data:
+            print("❌ المستخدم غير موجود في الداتابيز")
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="❌ المستخدم غير موجود"
@@ -1736,6 +2116,7 @@ async def handle_add_profit(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         username, full_name, current_balance = user_data
+        print(f"✅ وجدنا المستخدم: {full_name} - الرصيد: {current_balance}")
 
         # عرض طلب الإضافة مع الأزرار
         keyboard = [
@@ -1745,7 +2126,9 @@ async def handle_add_profit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        # ✅ استخدام context.bot.send_message
+        print(f"📤 جاري إرسال الرسالة للقناة...")
+
+        # إرسال الرسالة
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=f"📊 طلب إضافة أرباح:\n\n"
@@ -1759,15 +2142,40 @@ async def handle_add_profit(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
+        print("✅ تم إرسال الرسالة بنجاح!")
+
     except Exception as e:
+        print(f"❌ خطأ في handle_add_profit: {e}")
         logger.error(f"خطأ في إضافة الأرباح: {e}")
         try:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="❌ حدث خطأ في معالجة الطلب"
+                text=f"❌ حدث خطأ في معالجة الطلب: {str(e)[:100]}"
             )
-        except:
-            pass
+        except Exception as e2:
+            print(f"❌ فشل إرسال رسالة الخطأ: {e2}")
+async def handle_profit_data_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة إدخال بيانات الأرباح من الأدمن"""
+    try:
+        if context.user_data.get('awaiting_profit_data'):
+            text = update.message.text.strip()
+            parts = text.split()
+
+            if len(parts) == 2:
+                user_id, amount = parts
+                # تحويل لأمر addprofit
+                context.args = [user_id, amount]
+                await handle_add_profit(update, context)
+            else:
+                await update.message.reply_text("❌ صيغة خاطئة. مثال: 763916290 150")
+
+            # مسح حالة الانتظار
+            context.user_data.pop('awaiting_profit_data', None)
+
+    except Exception as e:
+        logger.error(f"خطأ في معالجة بيانات الأرباح: {e}")
+        await update.message.reply_text("❌ حدث خطأ في معالجة البيانات")
+
 # ==================== نظام الإحالة ====================
 
 def init_referral_system():
@@ -1824,13 +2232,30 @@ async def show_referral_system(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.answer()
 
         user_id = query.from_user.id
-        referral_code = f"REF{user_id}"
+        user_data = get_user_data(user_id)
 
-        # ⬇️ أولاً جرب هذا الرابط البسيط
-        bot_username = "Arba7Saudi_bot"  # غير هذا لاسم بوتك الصحيح
+        # 🔥 التعديل: استخدام OR بدل get مع default
+        referral_code = user_data.get('referral_code') or f"REF{user_id}"
+
+        # 🔥 الجديد: حفظ referral_code إذا كان غير موجود
+        if not user_data.get('referral_code'):
+            try:
+                conn = sqlite3.connect('trading_bot.db')
+                c = conn.cursor()
+                c.execute('UPDATE users SET referral_code = ? WHERE user_id = ?', (referral_code, user_id))
+                conn.commit()
+                conn.close()
+                print(f"✅ تم حفظ referral_code للمستخدم {user_id}: {referral_code}")
+            except Exception as e:
+                print(f"❌ خطأ في حفظ referral_code: {e}")
+
+        # 🔥 التعديل: استخدم معرف البوت الصحيح
+        bot_username = "Arba7Saudi_bot"
         referral_link = f"https://t.me/{bot_username}?start={referral_code}"
 
-        # عرض الرابط للمستخدم للتأكد
+        # 🔥 الجديد: جلب إحصائيات الإحالة
+        referral_count, total_commissions = get_referral_stats(user_id)
+
         referral_text = f"""🎁 <b>نظام الدعوة والتوصية</b>
 
 💼 <b>كود دعوتك:</b> <code>{referral_code}</code>
@@ -1838,10 +2263,17 @@ async def show_referral_system(update: Update, context: ContextTypes.DEFAULT_TYP
 🔗 <b>رابط الدعوة:</b>
 <code>{referral_link}</code>
 
-📣 <b>كيف تستخدم:</b>
+📊 <b>إحصائياتك:</b>
+• 👥 عدد الأحالة: {referral_count} شخص
+• 💰 إجمالي العمولات: {total_commissions:.2f} USDT
+
+📣 <b>كيفية الاستخدام:</b>
 1. انسخ الرابط أعلاه 📋
 2. أرسله لأصدقائك 📤
-3.عندما ينضم صديق، ستحصل على عمولة 10% من ايداعه 💰"""
+3. عندما ينضم صديق ويشترك، ستحصل على عمولة 10% من قيمة اشتراكه 💰
+
+🎯 <b>ملاحظة:</b> العمولة توزع تلقائياً عند اشتراك المحال"""
+
         keyboard = [
             [InlineKeyboardButton("📋 نسخ الرابط", callback_data="copy_referral_link")],
             [InlineKeyboardButton("🔙 رجوع", callback_data="back_to_main")]
@@ -1862,25 +2294,39 @@ async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ البوت شغال بشكل طبيعي!")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """أمر المساعدة"""
+    """عرض رسالة المساعدة المحدثة"""
     help_text = """
-🤖 **أوامر البوت:**
+<b>🆘 مركز المساعدة والدعم</b>
 
-/start - بدء استخدام البوت
-/test - اختبار حالة البوت
-/help - عرض هذه المساعدة
+<code>━━━━━━━━━━━━━━━━━━━━</code>
 
-📱 **للمستخدمين:**
-• أرسل بياناتك للتسجيل
-• أرسل صورة إثبات الدفع
-• استخدم الأزرار في القائمة
+<b>📞 طرق التواصل مع الدعم:</b>
 
-🛠️ **للمشرفين:**
-/broadcast - إرسال رسالة جماعية
-/send - إرسال رسالة لمستخدم محدد
+• <b>يمكنك كتابة أي رسالة هنا في البوت</b>
+• <b>ستصل رسالتك مباشرة إلى فريق الدعم</b>
+• <b>سيتم الرد عليك خلال دقائق</b>
+
+<code>━━━━━━━━━━━━━━━━━━━━</code>
+
+<b>❓ الأسئلة الشائعة:</b>
+
+• <i>كيف أبدأ التداول؟</i>
+↳ إضغط على "خطط الاشتراك" واختر الخطة المناسبة
+
+• <i>متى أستطيع سحب الأرباح؟</i>
+↳ يمكنك السحب كل 24 ساعة بدءاً من 25$
+
+• <i>كيف أدعو أصدقائي؟</i>
+↳ إضغط على "دعوة الأصدقاء" وانسخ رابط الدعوة
+
+<code>━━━━━━━━━━━━━━━━━━━━</code>
+
+<b>📢 ملاحظة:</b>
+<i>نحن هنا لمساعدتك على مدار الساعة</i>
+<i>لا تتردد في مراسلتنا لأي استفسار</i>
     """
-    await update.message.reply_text(help_text, parse_mode='Markdown')
 
+    await update.message.reply_text(help_text, parse_mode='HTML')
 async def admin_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """عرض إحصائيات البوت"""
     # التحقق من صلاحية الأدمن
@@ -1972,15 +2418,152 @@ async def send_error_notification(error_message: str):
         )
     except Exception as e:
         print(f"❌ فشل إرسال إشعار الخطأ: {e}")
+
+# ==================== دوال الأوامر الجديدة ====================
+
+async def handle_balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة أمر /balance"""
+    try:
+        user_id = update.effective_user.id
+        user_data = get_user_data(user_id)
+
+        if not user_data:
+            await update.message.reply_text("❌ لم يتم العثور على بياناتك. استخدم /start أولاً.")
+            return
+
+        balance = user_data.get('balance', 0)
+        await update.message.reply_text(f"💼 رصيدك الحالي: {balance:.2f} USDT")
+
+    except Exception as e:
+        logger.error(f"خطأ في أمر balance: {e}")
+        await update.message.reply_text("❌ حدث خطأ في جلب الرصيد")
+async def handle_plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة أمر /plans"""
+    try:
+        # إنشاء callback query وهمية للأمر
+        class MockQuery:
+            def __init__(self, update):
+                self.from_user = update.effective_user
+                self.message = update.message
+            async def answer(self):
+                pass
+            async def edit_message_text(self, text, reply_markup=None):
+                await self.message.reply_text(text, reply_markup=reply_markup)
+
+        mock_update = type('MockUpdate', (), {'callback_query': MockQuery(update)})()
+        await show_subscription_plans(mock_update, context)
+
+    except Exception as e:
+        logger.error(f"خطأ في أمر plans: {e}")
+        await update.message.reply_text("📋 خطط الاشتراك:\n\nاستخدم الزر في القائمة الرئيسية لعرض الخطط")
+
+async def handle_withdraw_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة أمر /withdraw"""
+    try:
+        # إنشاء callback query وهمية للأمر
+        class MockQuery:
+            def __init__(self, update):
+                self.from_user = update.effective_user
+                self.message = update.message
+            async def answer(self):
+                pass
+            async def edit_message_text(self, text, reply_markup=None):
+                await self.message.reply_text(text, reply_markup=reply_markup)
+
+        mock_update = type('MockUpdate', (), {'callback_query': MockQuery(update)})()
+        await show_withdraw_menu(mock_update, context)
+
+    except Exception as e:
+        logger.error(f"خطأ في أمر withdraw: {e}")
+        await update.message.reply_text("💳 نظام السحب:\n\nاستخدم الزر في القائمة الرئيسية لقائمة السحب")
+async def handle_subscription_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة أمر /mysubscription"""
+    try:
+        user_id = update.effective_user.id
+        user_data = get_user_data(user_id)
+
+        if not user_data:
+            await update.message.reply_text("❌ لم يتم العثور على بياناتك. استخدم /start أولاً.")
+            return
+
+        subscription_level = user_data.get('subscription_level')
+
+        if not subscription_level or subscription_level == 'basic':
+            # إذا ما عندو اشتراك نشط
+            await update.message.reply_text(
+                "📋 حالة الاشتراك:\n\n"
+                "🔸 الحالة: ❌ بدون اشتراك نشط\n\n"
+                "🚀 ابدأ رحلتك الاستثمارية الآن!\n\n"
+                "💎 لماذا تشترك معنا؟\n"
+                "• 📈 أرباح تصل إلى 150%\n"
+                "• ⚡ تنفيذ فوري للصفقات\n"
+                "• 🛡️ حماية كاملة لرأس المال\n"
+                "• 📊 تحليلات حية 24/7\n\n"
+                "🎯 اختر خطتك المناسبة وابدأ تحقيق الأرباح!\n\n"
+                "👉 استخدم /plans لعرض جميع الخطط المتاحة"
+            )
+        else:
+            # إذا عنده اشتراك نشط
+            if subscription_level in SUBSCRIPTION_PLANS:
+                plan_data = SUBSCRIPTION_PLANS[subscription_level]
+                plan_name = plan_data['name']
+                profits = plan_data['profits']
+                days = plan_data['days']
+                price = plan_data['price']
+
+                await update.message.reply_text(
+                    f"📋 اشتراكك الحالي:\n\n"
+                    f"✅ الحالة: 🟢 نشط\n"
+                    f"🔸 الخطة: {plan_name}\n"
+                    f"💰 السعر: {price} USDT\n"
+                    f"📈 الأرباح: {profits}\n"
+                    f"⏳ المدة: {days} يوم\n\n"
+                    f"🎯 يمكنك ترقية خطتك للحصول على أرباح أعلى!\n\n"
+                    f"👉 استخدم /plans لعرض خطط الترقية"
+                )
+            else:
+                await update.message.reply_text(
+                    f"📋 اشتراكك الحالي:\n\n"
+                    f"✅ الحالة: 🟢 نشط\n"
+                    f"🔸 المستوى: {subscription_level}\n\n"
+                    f"🎯 استخدم /plans لعرض الخطط المتاحة"
+                )
+
+    except Exception as e:
+        logger.error(f"خطأ في أمر mysubscription: {e}")
+        await update.message.reply_text("📋 حدث خطأ في جلب بيانات الاشتراك")
+async def handle_invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة أمر /invite"""
+    try:
+        # إنشاء callback query وهمية للأمر
+        class MockQuery:
+            def __init__(self, update):
+                self.from_user = update.effective_user
+                self.message = update.message
+            async def answer(self):
+                pass
+            async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
+                await self.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+
+        mock_update = type('MockUpdate', (), {'callback_query': MockQuery(update)})()
+        await show_referral_system(mock_update, context)  # ⬅️ نفس الدالة
+
+    except Exception as e:
+        logger.error(f"خطأ في أمر invite: {e}")
+        await update.message.reply_text("❌ حدث خطأ في إنشاء رابط الدعوة")
+# Handler احتياطي للتسجيل
+async def debug_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    print(f"🔍 DEBUG HANDLER - User: {user_id}, Text: {update.message.text}")
+    await handle_user_registration(update, context)
+
+
 # ==================== التشغيل الرئيسي ====================
 if __name__ == "__main__":
-    # تهيئة أنظمة البوت
     init_referral_system()
     print("✅ أنظمة البوت مهيأة")
 
     app = Application.builder().token(MAIN_BOT_TOKEN).build()
-
-    # ⬇️⬇️⬇️ handlers الأساسية فقط - مرتبة ⬇️⬇️⬇️
 
     # 1. CommandHandlers الأساسية
     app.add_handler(CommandHandler("start", start))
@@ -1988,28 +2571,32 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("stats", admin_stats_command))
     app.add_handler(CommandHandler("users", admin_users_command))
+    app.add_handler(CommandHandler("balance", handle_balance_command))
+    app.add_handler(CommandHandler("plans", handle_plans_command))
+    app.add_handler(CommandHandler("mysubscription", handle_subscription_command))
+    app.add_handler(CommandHandler("withdraw", handle_withdraw_command))
+    app.add_handler(CommandHandler("invite", handle_invite_command))
 
     # 2. CommandHandler الخاص بـ addprofit في القناة فقط
     app.add_handler(CommandHandler("addprofit", handle_add_profit, filters=filters.Chat(chat_id=int(ADMIN_CHAT_ID))))
 
-    # 3. MessageHandlers للقناة
+
+    # 4. MessageHandlers للمستخدمين العاديين - ⬇️⬇️⬇️ غير الترتيب ⬇️⬇️⬇️
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_withdraw_inputs))    # 1. السحب أولاً
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, debug_registration))  # ⬅️ جرب هذا
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_registration))  # 2. التسجيل ثانياً
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_user_messages))     # 3. المراسلة أخيراً
+    app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
+    # 3. MessageHandlers للقناة (الأدمن)
     app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=ADMIN_CHAT_ID), handle_channel_commands))
     app.add_handler(MessageHandler(filters.ALL & filters.Chat(chat_id=int(ADMIN_CHAT_ID)), handle_all_admin_messages))
-
-    # 4. MessageHandlers للمستخدمين العاديين
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_user_messages))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_payment_proof))
+    app.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=int(ADMIN_CHAT_ID)) & ~filters.COMMAND, handle_profit_data_input))
 
     # 5. CallbackHandler للأزرار
-    app.add_handler(CallbackQueryHandler(handle_admin_callback, pattern=r"^(confirm_withdrawal|reject_withdrawal|message_user|admin_|confirm_transfer|reject_transfer|reply_|withdraw_|subscribe_|confirm_payment|approve_sub|back_to_|check_balance|referral_system|subscription_plans|copy_referral_link|messaging_system|admin_pending|add_profit_menu|cancel_profit)"))
+    app.add_handler(CallbackQueryHandler(handle_admin_callback, pattern=r"^(check_subscription|confirm_withdrawal|reject_withdrawal|message_user|admin_|confirm_transfer|reject_transfer|reply_|withdraw_|subscribe_|confirm_payment|approve_sub|back_to_|check_balance|referral_system|subscription_plans|copy_referral_link|messaging_system|admin_pending|add_profit_menu|cancel_profit|confirm_profit|withdraw_menu|back_to_main|input_profit_data|processing_withdrawal|broadcast_message|withdraw_profits|withdraw_bonus)"))
 
     # 6. Error handler
     app.add_error_handler(error_handler)
 
     print("🎉 البوت شغال الآن!")
-    app.run_polling(
-        drop_pending_updates=True,
-        close_loop=False
-    )
-
-
+    app.run_polling(drop_pending_updates=True, close_loop=False)
